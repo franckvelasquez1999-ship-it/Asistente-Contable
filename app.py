@@ -14,7 +14,7 @@ from datetime import datetime
 # 1. Configuración de la página
 st.set_page_config(page_title="Extractor SIRE - Estilo Yape", layout="wide")
 
-# 2. INYECCIÓN DE DISEÑO INTERFAZ YAPE PREMIUM (Aquí está el CSS metido de forma correcta para Python)
+# 2. INYECCIÓN DE DISEÑO INTERFAZ YAPE PREMIUM
 st.markdown("""
     <style>
     /* Fondo morado Yape oficial de la aplicación */
@@ -285,16 +285,7 @@ def analizar_un_archivo_con_ia(archivo):
             serie, numero = id_comprobante.split("-", 1) if "-" in id_comprobante else (id_comprobante[:4], id_comprobante[4:])
             total_val = float(monto_total_xml.text) if monto_total_xml is not None else 0.0
             
-            res_txt = consultar_gemini_api_directo(f"Clasifica '{proveedor}' en una categoría de gasto corta de 2 a 4 palabras. Responde SOLO la categoría.", api_key_str=api_key)
+            res_txt = consultar_gemini_api_directo("Clasifica este proveedor en una categoría de gasto corta de 2 a 4 palabras. Responde SOLO la categoría.", api_key_str=api_key)
             categoria_gasto = res_txt.strip()
         else:
-            prompt = """
-            Analiza este documento contable de Perú de forma exhaustiva y extrae la información requerida.
-            Debes responder EXCLUSIVAMENTE un bloque de texto formateado en JSON estructurado. No incluyas marcas markdown de código como ```json ni texto adicional fuera de las llaves.
-            
-            Campos exactos a extraer:
-            {
-              "ruc_emisor": "Número de RUC de 11 dígitos del vendedor emisor",
-              "razon_social": "Nombre o denominación social de la empresa emisora",
-              "fecha_emision": "Fecha en formato AAAA-MM-DD",
-              "serie": "Serie de 4 caracteres (ej. F001)",
+            # Prompt unificado en una sola línea continua para evitar errores de triple comilla (SyntaxError)
