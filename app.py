@@ -236,17 +236,15 @@ btn_col1, btn_col2 = st.columns(2)
 
 with btn_col1:
     if st.button("🚀 Generar Nuevo Comprobante Único"):
-        # Cálculo seguro de valores dinámicos
         t1, t2, t3 = str(random.randint(0, 9)), str(random.randint(0, 9)), str(random.randint(0, 9))
         nro_op = str(random.randint(10000000, 99999999))
         
-        meses_es = {"Jan":"jul.", "Feb":"feb.", "Mar":"mar.", "Apr":"abr.", "May":"may.", "Jun":"jun.", "Jul":"jul.", "Aug":"ago.", "Sep":"set.", "Oct":"oct.", "Nov":"nov.", "Dec":"dic."}
+        meses_es = {"Jan":"ene.", "Feb":"feb.", "Mar":"mar.", "Apr":"abr.", "May":"may.", "Jun":"jun.", "Jul":"jul.", "Aug":"ago.", "Sep":"set.", "Oct":"oct.", "Nov":"nov.", "Dec":"dic."}
         fecha_hoy = datetime.now()
-        mes_corregido = meses_es.get(fecha_hoy.strftime("%b"), "jul.")
+        mes_corregido = meses_es.get(fecha_hoy.strftime("%b"), "ago.")
         fecha_actual_str = f"{fecha_hoy.strftime('%d')} {mes_corregido} {fecha_hoy.strftime('%Y')} | {fecha_hoy.strftime('%I:%M %p.').lower()}"
         monto_formateado = f"{monto_envio:,.2f}".replace(".00", "")
 
-        # CONSTRUCCIÓN HTML PURO USANDO FORMATEO INDEXADO (EVITA CUALQUER ERROR SINTÁCTICO DE TRIPLES COMILLAS)
         st.session_state.html_actual = """
         <div class="yape-voucher-real">
             <div class="yape-cabecera-art">
@@ -304,5 +302,6 @@ with btn_col2:
         st.session_state.html_actual = None
         st.rerun()
 
-# 5. RENDERIZADO DEL COMPROBANTE BLOQUEADO EN SESIÓN
+# 5. RENDERIZADO DEL COMPROBANTE BLOQUEADO EN SESIÓN (CORREGIDO DE INDENTACIÓN)
 if st.session_state.html_actual:
+    st.markdown(st.session_state.html_actual, unsafe_allow_html=True)
