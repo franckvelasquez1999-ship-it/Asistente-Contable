@@ -82,7 +82,7 @@ st.markdown("""
         margin: 10px 0;
     }
     
-    .yape-monto span {
+    .yape-monto-simbolo {
         font-size: 1.8rem !important;
         color: #2b2b2b !important;
         font-weight: 700;
@@ -172,116 +172,118 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 st.title("📊 Extractor de Facturas SUNAT")
-st.write("✨ **Motor de Alta Velocidad (Paralelo):** Procesamiento de documentos con el diseño de tu billetera digital.")
+st.write("✨ **Motor de Alta Velocidad:** Procesamiento de comprobantes con el diseño e identidad de Yape.")
 
 api_key = st.secrets.get("GEMINI_API_KEY", "")
 
-def consultar_gemini_api_directo(prompt, contenido_bytes, mime_type, api_key_str):
+# FUNCIÓN HTTP DIRECTA COMPATIBLE CON GEMINI
+def consultar_gemini_api_directo(prompt, contenido_bytes=None, mime_type=None, api_key_str=""):
     url = f"https://googleapis.com{api_key_str}"
-    base64_data = base64.b64encode(contenido_bytes).decode("utf-8")
     headers = {"Content-Type": "application/json"}
-    payload = {
-        "contents": [{"parts": [{"text": prompt}, {"inlineData": {"mimeType": mime_type, "data": base64_data}}]}]
-    }
+    
+    partes = [{"text": prompt}]
+    if contenido_bytes and mime_type:
+        base64_data = base64.b64encode(contenido_bytes).decode("utf-8")
+        partes.append({
+            "inlineData": {
+                "mimeType": mime_type,
+                "data": base64_data
+            }
+        })
+        
+    payload = {"contents": [{"parts": partes}]}
     response = requests.post(url, headers=headers, json=payload, timeout=30)
+    
     if response.status_code == 200:
         try:
             return response.json()["candidates"][0]["content"]["parts"][0]["text"]
         except (KeyError, IndexError):
-            raise Exception("Estructura de respuesta inesperada de la API de Google.")
+            raise Exception("Respuesta con estructura inesperada de Google.")
     else:
-        raise Exception(f"Error HTTP {response.status_code}")
+        raise Exception(f"Error del servidor Google (HTTP {response.status_code})")
 
+# FUNCIÓN PARA PROCESAR LOS ARCHIVOS
 def analizar_un_archivo_con_ia(archivo):
     try:
         ext = archivo.name.split(".")[-1].lower()
         bytes_archivo = archivo.read()
         
-        prompt = """
-        Analiza este documento contable de Perú de forma exhaustiva y extrae la información requerida.
-        Debes responder EXCLUSIVAMENTE un bloque de texto formateado en JSON estructurado. No incluyas marcas markdown de código como ```json ni texto adicional fuera de las llaves.
-        
-        Campos exactos a extraer:
-        {
-          "ruc_emisor": "Número de RUC de 11 dígitos del vendedor emisor",
-          "razon_social": "Nombre o denominación social de la empresa emisora",
-          "fecha_emision": "Fecha en formato AAAA-MM-DD",
-          "serie": "Serie de 4 caracteres (ej. F001)",
-          "numero": "Número correlativo",
-          "total": 0.00,
-          "categoria_gasto": "Categoría corta"
-        }
-        """
-        
-        if ext in ["jpg", "jpeg", "png"]:
-            mime_type = "image/jpeg"
-        else:
-            mime_type = "application/pdf"
+        if ext == "xml":
+            archivo.seek(0)
+            tree = ET.parse(archivo)
+            root = tree.getroot()
+            serie_num = root.find(".//{*}ID")
+            fecha_emision = root.find(".//{*}IssueDate")
+            ruc_emisor = root.find(".//{*}AccountingSupplierParty//{*}CustomerAssignedAccountID")
+            nombre_emisor = root.find(".//{*}AccountingSupplierParty//{*}RegistrationName")
+            monto_total_xml = root.find(".//{*}LegalMonetaryTotal//{*}PayableAmount")
             
-        texto_respuesta = consultar_gemini_api_directo(prompt, bytes_archivo, mime_type, api_key)
-        texto_respuesta = texto_respuesta.strip()
-        
-        if "{" in texto_respuesta:
-            texto_respuesta = texto_respuesta[texto_respuesta.find("{"):texto_respuesta.rfind("}")+1]
-        
-        data_ia = json.loads(texto_respuesta)
-        
-        total_val = float(data_ia.get("total", 0.0))
+            ruc = ruc_emisor.text if ruc_emisor is not None else "No encontrado"
+            proveedor = nombre_emisor.text if nombre_emisor is not None else "No encontrado"
+            fecha = fecha_emision.text if fecha_emision is not None else "No encontrado"
+            id_comprobante = serie_num.text if serie_num is not None else "F001-00000001"
+            serie, numero = id_comprobante.split("-", 1) if "-" in id_comprobante else (id_comprobante[:4], id_comprobante[4:])
+            total_val = float(monto_total_xml.text) if monto_total_xml is not None else 0.0
+            
+            res_txt = consultar_gemini_api_directo(f"Clasifica '{proveedor}' en una categoría de gasto corta de 2 a 4 palabras. Responde SOLO la categoría.", api_key_str=api_key)
+            categoria_gasto = res_txt.strip()
+        else:
+            prompt = """
+            Analiza este documento contable de Perú de forma exhaustiva y extrae la información requerida.
+            Debes responder EXCLUSIVAMENTE un bloque de texto formateado en JSON estructurado. No incluyas marcas markdown de código como ```json ni texto adicional fuera de las llaves.
+            
+            Campos exactos a extraer:
+            {
+              "ruc_emisor": "Número de RUC de 11 dígitos del vendedor emisor",
+              "razon_social": "Nombre o denominación social de la empresa emisora",
+              "fecha_emision": "Fecha en formato AAAA-MM-DD",
+              "serie": "Serie de 4 caracteres (ej. F001)",
+              "numero": "Número correlativo",
+              "total": 0.00,
+              "categoria_gasto": "Categoría corta de gasto"
+            }
+            """
+            mime_type = "image/jpeg" if ext in ["jpg", "jpeg", "png"] else "application/pdf"
+            texto_respuesta = consultar_gemini_api_directo(prompt, bytes_archivo, mime_type, api_key)
+            texto_respuesta = texto_respuesta.strip()
+            
+            if "{" in texto_respuesta:
+                texto_respuesta = texto_respuesta[texto_respuesta.find("{"):texto_respuesta.rfind("}")+1]
+            
+            data_ia = json.loads(texto_respuesta)
+            ruc = data_ia.get("ruc_emisor", "No encontrado")
+            proveedor = data_ia.get("razon_social", "No encontrado")
+            fecha = data_ia.get("fecha_emision", "No encontrado")
+            serie = data_ia.get("serie", "F001")
+            numero = data_ia.get("numero", "00000001")
+            total_val = float(data_ia.get("total", 0.0))
+            categoria_gasto = data_ia.get("categoria_gasto", "Por clasificar")
+
         base_imponible = round(total_val / 1.18, 2)
         igv = round(total_val - base_imponible, 2)
         
+        # Formatear la fecha para SUNAT (DD/MM/AAAA)
+        fecha_sire = fecha
+        periodo_sire = "202608"
+        if fecha and "-" in str(fecha):
+            partes = str(fecha).split("-")
+            if len(partes) == 3:
+                fecha_sire = f"{partes[2]}/{partes[1]}/{partes[0]}"
+                periodo_sire = f"{partes[0]}{partes[1]}"
+
         return {
-            "Periodo": "202608",
-            "Fecha Emisión": data_ia.get("fecha_emision", "18/08/2026"),
-            "Serie": data_ia.get("serie", "F001"),
-            "Número": data_ia.get("numero", "00000001"),
-            "RUC Emisor": data_ia.get("ruc_emisor", "No encontrado"),
-            "Razón Social": data_ia.get("razon_social", "No encontrado"),
+            "Periodo": periodo_sire,
+            "Fecha Emisión": fecha_sire,
+            "Tipo Comp.": "01",
+            "Serie": str(serie),
+            "Número": str(numero),
+            "Tipo Doc Identidad": "6",
+            "RUC Emisor": str(ruc),
+            "Razón Social": str(proveedor),
             "Base Imponible S/": base_imponible,
             "IGV S/": igv,
             "Total S/": total_val,
-            "Categoría IA (Gasto)": data_ia.get("categoria_gasto", "Por clasificar")
+            "Categoría IA (Gasto)": str(categoria_gasto)
         }
     except Exception as e:
-        return {"Periodo": "202608", "Fecha Emisión": "18/08/2026", "Serie": "F001", "Número": "00000001", "RUC Emisor": "Error", "Razón Social": f"Fallo: {str(e)}", "Base Imponible S/": 0.0, "IGV S/": 0.0, "Total S/": 0.0, "Categoría IA (Gasto)": "Error"}
 
-archivos_subidos = st.file_uploader("Sube tus comprobantes masivos (XML, PDF, JPG, PNG)", type=["pdf", "jpg", "png"], accept_multiple_files=True)
-
-if archivos_subidos:
-    with ThreadPoolExecutor(max_workers=5) as executor:
-        resultados = executor.map(analizar_un_archivo_con_ia, archivos_subidos)
-        datos_facturas = list(resultados)
-
-    if datos_facturas:
-        df = pd.DataFrame(datos_facturas)
-        
-        # OBTENEMOS LOS DATOS DEL PRIMER COMPROBANTE PARA MOSTRAR EN EL VOUCHER
-        primera_factura = datos_facturas[0]
-        monto_total = primera_factura["Total S/"]
-        razon_social_corto = primera_factura["Razón Social"][:22]
-        ruc_emisor = primera_factura["RUC Emisor"]
-        nro_comprobante = f"{primera_factura['Serie']}-{primera_factura['Número']}"
-        
-        # Generar código de seguridad aleatorio como el de Yape
-        token_1, token_2, token_3 = str(random.randint(0,9)), str(random.randint(0,9)), str(random.randint(0,9))
-        nro_operacion = str(random.randint(10000000, 99999999))
-        fecha_actual_str = datetime.now().strftime("%d %b. %Y | %I:%M %p.")
-
-        # RENDEREADO HTML EXACTO DE LA CONSTANCIA DE YAPE
-        st.markdown(f"""
-        <div class="yape-container">
-            <div class="yape-header-art">📦 EXTRACTOR INTELIGENTE</div>
-            <div class="yape-card">
-                <div class="yape-title">¡Yapeaste!</div>
-                <div class="yape-monto"><span>S/</span> {monto_total:,.2f}</div>
-                <div class="yape-usuario">{razon_social_corto}</div>
-                <div class="yape-fecha">📅 {fecha_actual_str}</div>
-                
-                <div class="yape-seguridad-box">
-                    <div class="yape-seguridad-label">Código de seguridad</div>
-                    <div class="yape-token-container">
-                        <span class="yape-digit">{token_1}</span>
-                        <span class="yape-digit">{token_2}</span>
-                        <span class="yape-digit">{token_3}</span>
-                    </div>
-                </div>
