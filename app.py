@@ -1,10 +1,11 @@
 import streamlit as st
 import pandas as pd
 import xml.etree.ElementTree as ET
-import google.generativeai as genai
 import io
 import json
 import re
+import requests
+import base64
 from PIL import Image
 from concurrent.futures import ThreadPoolExecutor
 
@@ -26,10 +27,58 @@ st.markdown("""
 st.title("📊 Extractor de Facturas SUNAT")
 st.write("✨ **Motor de Alta Velocidad (Paralelo):** Procesamiento instantáneo de XML, PDF e imágenes con compresión automática e IA Google Gemini.")
 
-# Configurar la conexión con Gemini
+# Obtener API Key de los Secrets de Streamlit
 api_key = st.secrets.get("GEMINI_API_KEY", "")
-if api_key:
-    genai.configure(api_key=api_key)
+
+# FUNCIÓN PARA LLAMAR A GEMINI MEDIANTE HTTP DIRECTO (BYPASSEA EL BUG DEL SDK 404)
+def consultar_gemini_api_directo(prompt, contenido_bytes, mime_type, api_key_str):
+    url = f"https://googleapis.com{api_key_str}"
+    
+    # Convertir el archivo a Base64 requerido por la API de Google
+    base64_data = base64.b64encode(contenido_bytes).decode("utf-8")
+    
+    headers = {"Content-Type": "application/json"}
+    payload = {
+        "contents": [
+            {
+                "parts": [
+                    {"text": prompt},
+                    {
+                        "inlineData": {
+                            "mimeType": mime_type,
+                            "data": base64_data
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+    
+    response = requests.post(url, headers=headers, json=payload, timeout=30)
+    if response.status_code == 200:
+        resultado_json = response.json()
+        try:
+            texto = resultado_json["candidates"][0]["content"]["parts"][0]["text"]
+            return texto
+        except KeyError:
+            raise Exception("Estructura de respuesta inesperada de la API de Google.")
+    else:
+        raise Exception(f"Error HTTP {response.status_code}: {response.text}")
+
+# FUNCIÓN PARA LLAMAR A GEMINI SOLO TEXTO (XML CLASIFICACIÓN)
+def consultar_gemini_texto_directo(prompt, api_key_str):
+    url = f"https://googleapis.com{api_key_str}"
+    headers = {"Content-Type": "application/json"}
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}]
+    }
+    response = requests.post(url, headers=headers, json=payload, timeout=20)
+    if response.status_code == 200:
+        try:
+            return response.json()["candidates"][0]["content"]["parts"][0]["text"]
+        except KeyError:
+            return "General"
+    return "General"
 
 # FUNCIÓN PARA NORMALIZAR FECHAS DE MANERA SEGURA
 def normalizar_fecha(texto_fecha):
@@ -49,6 +98,9 @@ def normalizar_fecha(texto_fecha):
 
 # FUNCIÓN INDEPENDIENTE PARA PROCESAR CON LA IA
 def analizar_un_archivo_con_ia(archivo):
+    if not api_key:
+        return construir_diccionario_factura("No encontrado", "Error", "Error", "No encontrado", "Falta configurar GEMINI_API_KEY", 0.0, "Sin Configurar", archivo.name)
+        
     try:
         ext = archivo.name.split(".")[-1].lower()
         bytes_archivo = archivo.read()
@@ -70,16 +122,11 @@ def analizar_un_archivo_con_ia(archivo):
             serie, numero = id_comprobante.split("-", 1) if "-" in id_comprobante else (id_comprobante[:4], id_comprobante[4:])
             total = float(monto_total_xml.text) if monto_total_xml is not None else 0.0
             
-            # Cambiado a identificador universal robusto compatible
-            model_text = genai.GenerativeModel('gemini-1.5-flash-latest')
-            res_txt = model_text.generate_content(f"Clasifica '{proveedor}' en una categoría de gasto contable de 2 a 4 palabras. Responde SOLO la categoría.")
-            categoria_gasto = res_txt.text.strip()
+            res_txt = consultar_gemini_texto_directo(f"Clasifica '{proveedor}' en una categoría de gasto contable de 2 a 4 palabras. Responde SOLO la categoría.", api_key)
+            categoria_gasto = res_txt.strip()
             
             return construir_diccionario_factura(fecha, serie, numero, ruc, proveedor, total, categoria_gasto, archivo.name)
 
-        # Cambiado a identificador universal robusto compatible para evitar error 404
-        model = genai.GenerativeModel('gemini-1.5-flash-latest')
-        
         prompt = """
         Analiza este documento contable de Perú de forma exhaustiva y extrae la información requerida.
         Debes responder EXCLUSIVAMENTE un bloque de texto formateado en JSON estructurado. No incluyas marcas markdown de código como ```json ni texto adicional fuera de las llaves.
@@ -101,12 +148,14 @@ def analizar_un_archivo_con_ia(archivo):
             img = img.convert("RGB")
             out_img = io.BytesIO()
             img.save(out_img, format="JPEG", quality=60)
-            documento_data = {'mime_type': 'image/jpeg', 'data': out_img.getvalue()}
+            contenido_envio = out_img.getvalue()
+            mime_type = "image/jpeg"
         else:
-            documento_data = {'mime_type': 'application/pdf', 'data': bytes_archivo}
+            contenido_envio = bytes_archivo
+            mime_type = "application/pdf"
             
-        response = model.generate_content([prompt, documento_data])
-        texto_respuesta = response.text.strip()
+        texto_respuesta = consultar_gemini_api_directo(prompt, contenido_envio, mime_type, api_key)
+        texto_respuesta = texto_respuesta.strip()
         
         if "{" in texto_respuesta:
             texto_respuesta = texto_respuesta[texto_respuesta.find("{"):texto_respuesta.rfind("}")+1]
@@ -120,7 +169,7 @@ def analizar_un_archivo_con_ia(archivo):
             data_ia.get("categoria_gasto"), archivo.name
         )
     except Exception as e:
-        return construir_diccionario_factura("No encontrado", "Error", "Error", "No encontrado", f"Fallo en lectura de estructura: {str(e)}", 0.0, "Por clasificar", archivo.name)
+        return construir_diccionario_factura("No encontrado", "Error", "Error", "No encontrado", f"Fallo: {str(e)}", 0.0, "Por clasificar", archivo.name)
 
 def construir_diccionario_factura(fecha, serie, numero, ruc, proveedor, total, categoria_gasto, nombre_archivo):
     base_imponible = round(total / 1.18, 2)
@@ -163,31 +212,5 @@ if archivos_subidos:
 
     if datos_facturas:
         df = pd.DataFrame(datos_facturas)
-        st.success(f"¡Se consolidaron con éxito {len(datos_facturas)} documentos!")
-        st.dataframe(df.drop(columns=["Archivo Original"]), use_container_width=True)
-        
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Total Base Imponible", f"S/ {df['Base Imponible S/'].sum():,.2f}")
-        col2.metric("Total Crédito Fiscal (IGV)", f"S/ {df['IGV S/'].sum():,.2f}")
-        col3.metric("Total Facturado", f"S/ {df['Total S/'].sum():,.2f}")
-        
-        st.subheader("💾 Descarga de Documentos Consolidados")
-        
-        lineas_txt = [f"{r['Periodo']}|{r['RUC Emisor']}-{r['Serie']}-{r['Número']}|{r['Fecha Emisión']}||01|{r['Serie']}|{r['Número']}||6|{r['RUC Emisor']}|{r['Razón Social']}|{r['Base Imponible S/']:.2f}|{r['IGV S/']:.2f}||||||{r['Total S/']:.2f}|||1|||" for i, r in df.iterrows()]
-        contenido_txt = "\r\n".join(lineas_txt) + "\r\n"
-        
-        # CORRECCIÓN DE SINTAXIS EN PANDAS (.iloc[0] Añadido correctamente)
-        periodo_detectado = df["Periodo"].iloc[0] if not df.empty else "202608"
-        ruc_cliente_ejemplo = "20123456789"
-        nombre_txt_oficial = f"LE{ruc_cliente_ejemplo}{periodo_detectado}0000080400001111.txt"
-        
-        b1, b2 = st.columns(2)
-        with b1:
-            st.download_button("📥 Descargar Archivo Plano SIRE (.txt)", data=contenido_txt, file_name=nombre_txt_oficial, mime="text/plain")
-        with b2:
-            out = io.BytesIO()
-            with pd.ExcelWriter(out, engine='openpyxl') as w: 
-                df.drop(columns=["Archivo Original"]).to_excel(w, index=False)
-            st.download_button("📥 Descargar Reporte en Excel (.xlsx)", data=out.getvalue(), file_name=f"reporte_control_sire_{periodo_detectado}.xlsx")
 
 
