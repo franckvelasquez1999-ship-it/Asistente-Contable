@@ -64,7 +64,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 st.title("📊 Extractor de Facturas SUNAT")
-st.write("✨ **IDP Avanzado:** Procesamiento inteligente de comprobantes en formatos XML, PDF, JPG y PNG con Visión Artificial.")
+st.write("✨ **IDP Avanzado:** Procesamiento inteligente de comprobantes")
 
 # Conexión segura con la IA
 api_key = st.secrets.get("GROQ_API_KEY", "")
