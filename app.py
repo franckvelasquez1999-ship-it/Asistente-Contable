@@ -5,7 +5,11 @@ from datetime import datetime
 # 1. Configuración de la página del simulador
 st.set_page_config(page_title="Simulador de Constancias Yape", layout="centered")
 
-# 2. INYECCIÓN DE DISEÑO INTERFAZ DE YAPE PREMIUM (Aquí está el CSS metido de forma correcta)
+# Inicializar la memoria de sesión para el comprobante si no existe
+if "html_actual" not in st.session_state:
+    st.session_state.html_actual = None
+
+# 2. INYECCIÓN DE DISEÑO INTERFAZ DE YAPE PREMIUM
 st.markdown("""
     <style>
     .stApp { 
@@ -211,7 +215,7 @@ st.markdown("""
 st.title("🔮 Simulador de Comprobantes Yape")
 st.write("Genera constancias digitales con códigos y tokens dinámicos en tiempo real.")
 
-# 3. FORMULARIO DE RECOPILACIÓN DE DATOS (Panel Superior)
+# 3. FORMULARIO DE RECOPILACIÓN DE DATOS
 st.markdown("### 📝 Datos del Comprobante")
 col1, col2 = st.columns(2)
 
@@ -223,74 +227,70 @@ with col2:
     numero_celular = st.text_input("Número de Celular", "*** *** 614")
     banco_destino = st.selectbox("Banco Destino", ["Yape", "BCP", "Interbank", "BBVA", "Scotiabank"])
 
-# 4. PROCESAMIENTO LINEAL DE GENERACIÓN
-if st.button("🚀 Generar Nuevo Comprobante Único"):
-    
-    # Generación matemática aleatoria de códigos independientes por clic
-    cod_seguridad_1 = str(random.randint(0, 9))
-    cod_seguridad_2 = str(random.randint(0, 9))
-    cod_seguridad_3 = str(random.randint(0, 9))
-    numero_operacion_dinamico = str(random.randint(10000000, 99999999))
-    
-    # Cálculo y traducción de la fecha en tiempo real estilo app móvil
-    meses_es = {
-        "Jan": "ene.", "Feb": "feb.", "Mar": "mar.", "Apr": "abr.", 
-        "May": "may.", "Jun": "jun.", "Jul": "jul.", "Aug": "ago.", 
-        "Sep": "set.", "Oct": "oct.", "Nov": "nov.", "Dec": "dic."
-    }
-    fecha_actual = datetime.now()
-    mes_formateado = meses_es.get(fecha_actual.strftime("%b"), "ago.")
-    timestamp_yape = f"{fecha_actual.strftime('%d')} {mes_formateado} {fecha_actual.strftime('%Y')} | {fecha_actual.strftime('%I:%M %p.').lower()}"
-    monto_formateado = f"{monto_envio:,.2f}"
+# 4. BOTONES DE ACCIÓN EN PARALELO
+btn_col1, btn_col2 = st.columns(2)
 
-    # ESTRUCTURA HTML DE LA CONSTANCIA REQUERIDA SIN F-STRINGS ANIDADAS (EVITA EL SYNTAXERROR)
-    plantilla_html = """
-    <div class="yape-voucher-completo">
-        <div class="yape-banner-valdelomar">
-            <div class="yape-logo-top">
-                <div class="yape-logo-circle">S/</div>
-                <div class="yape-logo-text">yape</div>
-            </div>
-            <div class="avatar-valdelomar"></div>
-            <div class="txt-valdelomar">ABRAHAM<br>VALDELOMAR</div>
-        </div>
+with btn_col1:
+    if st.button("🚀 Generar Nuevo Comprobante Único"):
+        cod_seguridad_1 = str(random.randint(0, 9))
+        cod_seguridad_2 = str(random.randint(0, 9))
+        cod_seguridad_3 = str(random.randint(0, 9))
+        numero_operacion_dinamico = str(random.randint(10000000, 99999999))
         
-        <div class="yape-card-blanca">
-            <div class="yape-header-title">¡Yapeaste!</div>
-            <div class="yape-monto-grande"><span>S/</span>__MONTO__</div>
-            <div class="yape-destinatario">__NOMBRE__</div>
-            <div class="yape-timestamp">📅 __FECHA__</div>
+        meses_es = {
+            "Jan": "ene.", "Feb": "feb.", "Mar": "mar.", "Apr": "abr.", 
+            "May": "may.", "Jun": "jun.", "Jul": "jul.", "Aug": "ago.", 
+            "Sep": "set.", "Oct": "oct.", "Nov": "nov.", "Dec": "dic."
+        }
+        fecha_actual = datetime.now()
+        mes_formateado = meses_es.get(fecha_actual.strftime("%b"), "ago.")
+        timestamp_yape = f"{fecha_actual.strftime('%d')} {mes_formateado} {fecha_actual.strftime('%Y')} | {fecha_actual.strftime('%I:%M %p.').lower()}"
+        monto_formateado = f"{monto_envio:,.2f}"
+
+        plantilla_html = """
+        <div class="yape-voucher-completo">
+            <div class="yape-banner-valdelomar">
+                <div class="yape-logo-top">
+                    <div class="yape-logo-circle">S/</div>
+                    <div class="yape-logo-text">yape</div>
+                </div>
+                <div class="avatar-valdelomar"></div>
+                <div class="txt-valdelomar">ABRAHAM<br>VALDELOMAR</div>
+            </div>
             
-            <div class="yape-token-row">
-                <div class="yape-token-title">Código de seguridad</div>
-                <div class="yape-token-blocks">
-                    <div class="yape-block-num">__TOK1__</div>
-                    <div class="yape-block-num">__TOK2__</div>
-                    <div class="yape-block-num">__TOK3__</div>
+            <div class="yape-card-blanca">
+                <div class="yape-header-title">¡Yapeaste!</div>
+                <div class="yape-monto-grande"><span>S/</span>__MONTO__</div>
+                <div class="yape-destinatario">__NOMBRE__</div>
+                <div class="yape-timestamp">📅 __FECHA__</div>
+                
+                <div class="yape-token-row">
+                    <div class="yape-token-title">Código de seguridad</div>
+                    <div class="yape-token-blocks">
+                        <div class="yape-block-num">__TOK1__</div>
+                        <div class="yape-block-num">__TOK2__</div>
+                        <div class="yape-block-num">__TOK3__</div>
+                    </div>
+                </div>
+                
+                <div class="yape-info-section-title">Datos de la transacción</div>
+                <div class="yape-meta-row">
+                    <span class="yape-meta-label">Nro. de celular</span>
+                    <span class="yape-meta-value">__CEL__</span>
+                </div>
+                <div class="yape-meta-row">
+                    <span class="yape-meta-label">Destino</span>
+                    <span class="yape-meta-value">__BANCO__</span>
+                </div>
+                <div class="yape-meta-row">
+                    <span class="yape-meta-label">Nro. de operación</span>
+                    <span class="yape-meta-value">__NRO__</span>
                 </div>
             </div>
-            
-            <div class="yape-info-section-title">Datos de la transacción</div>
-            <div class="yape-meta-row">
-                <span class="yape-meta-label">Nro. de celular</span>
-                <span class="yape-meta-value">__CEL__</span>
-            </div>
-            <div class="yape-meta-row">
-                <span class="yape-meta-label">Destino</span>
-                <span class="yape-meta-value">__BANCO__</span>
-            </div>
-            <div class="yape-meta-row">
-                <span class="yape-meta-label">Nro. de operación</span>
-                <span class="yape-meta-value">__NRO__</span>
-            </div>
         </div>
-    </div>
-    """
-    
-    # Reemplazo de variables seguro para blindar la app
-    html_constancia = plantilla_html.replace("__MONTO__", monto_formateado)\
-                                    .replace("__NOMBRE__", nombre_destinatario)\
-                                    .replace("__FECHA__", timestamp_yape)\
-                                    .replace("__TOK1__", cod_seguridad_1)\
-                                    .replace("__TOK2__", cod_seguridad_2)\
-
+        """
+        
+        # Almacenar de forma segura el resultado procesado en la memoria de sesión
+        st.session_state.html_actual = plantilla_html.replace("__MONTO__", monto_formateado)\
+                                                        .replace("__NOMBRE__", nombre_destinatario)\
+                                                        .replace("__FECHA__", timestamp_yape)\
