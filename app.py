@@ -12,140 +12,169 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
 # 1. Configuración de la página
-st.set_page_config(page_title="Extractor SIRE - Estilo Yape", layout="wide")
+st.set_page_config(page_title="Asistente Contable", layout="wide")
 
-# 2. INYECCIÓN DE DISEÑO INTERFAZ YAPE PREMIUM
+# 2. INYECCIÓN DE DISEÑO INTERFAZ CLONADA DE YAPE
 st.markdown("""
     <style>
+    /* Fondo morado Yape de la aplicación completa */
     .stApp { 
-        background-color: #742284 !important; 
-        font-family: 'Inter', sans-serif; 
+        background-color: #69167c !important; 
+        font-family: 'Inter', -apple-system, sans-serif; 
     }
+    
     h1, h2, h3, h4, .stMarkdown p, p, span, label { 
         color: #ffffff !important; 
     }
+    
     .stFileUploader { 
-        background-color: #8c339c !important; 
+        background-color: #7b258e !important; 
         border: 2px dashed #00e6b3 !important; 
         border-radius: 20px !important; 
         padding: 25px !important; 
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2) !important; 
     }
+
+    /* CONTENEDOR VOUCHER PRINCIPAL */
     .yape-voucher-completo {
-        max-width: 450px;
-        background-color: #742284;
-        border-radius: 0px;
+        max-width: 440px;
+        background-color: #69167c;
         margin: 20px auto;
-        font-family: 'Inter', sans-serif;
         text-align: center;
-        box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        padding-bottom: 20px;
     }
+
+    /* CABECERA: Fondo de líneas del billete y Abraham Valdelomar */
     .yape-banner-valdelomar {
         width: 100%;
-        height: 180px;
-        background: #742284 linear-gradient(135deg, rgba(255,255,255,0.05) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0.05) 75%, transparent 75%, transparent);
-        background-size: 40px 40px;
+        height: 220px;
+        background-color: #69167c;
+        background-image: 
+            radial-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 0),
+            radial-gradient(rgba(255, 255, 255, 0.1) 2px, transparent 0);
+        background-size: 8px 8px, 16px 16px;
+        background-position: 0 0, 4px 4px;
         position: relative;
-        border-bottom: 2px solid rgba(255,255,255,0.1);
         display: flex;
         align-items: center;
         justify-content: center;
     }
+
+    /* Logo Redondo Yape Izquierda */
     .yape-logo-top {
         position: absolute;
         left: 25px;
-        top: 45px;
+        top: 60px;
         width: 65px;
         height: 65px;
+    }
+    .yape-logo-circle {
+        width: 26px;
+        height: 26px;
         background-color: #00e6b3;
         border-radius: 50%;
         display: flex;
-        flex-direction: column;
         justify-content: center;
         align-items: center;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-    }
-    .yape-logo-top .s-moneda {
-        font-size: 0.65rem;
-        color: #742284;
+        font-size: 0.6rem;
+        color: #69167c;
         font-weight: 800;
-        margin-bottom: -5px;
-    }
-    .yape-logo-top .brand-txt {
-        font-size: 1.2rem;
-        color: #ffffff;
-        font-weight: 900;
-        font-style: italic;
-        font-family: sans-serif;
-    }
-    .avatar-valdelomar {
-        width: 110px;
-        height: 110px;
-        border-radius: 50%;
-        border: 3px double rgba(255,255,255,0.4);
-        background: radial-gradient(circle, #8c339c, #4a1254);
-        box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
-    }
-    .txt-valdelomar {
-        position: absolute;
-        right: 20px;
-        color: rgba(255,255,255,0.4) !important;
-        font-family: 'Georgia', serif;
-        font-size: 0.85rem;
-        text-align: right;
-        line-height: 1.1;
-        letter-spacing: 1px;
-    }
-    .yape-card-blanca {
-        background-color: #ffffff !important;
-        border-radius: 28px;
-        padding: 30px 25px;
-        margin: 0 20px 30px 20px;
-        text-align: left;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-    }
-    .yape-header-title {
-        color: #742284 !important;
-        font-size: 1.65rem !important;
-        font-weight: 800;
-        margin-bottom: 5px;
-    }
-    .yape-monto-grande {
-        color: #3b3b3b !important;
-        font-size: 3.4rem !important;
-        font-weight: 800;
-        margin: 15px 0;
-        display: flex;
-        align-items: baseline;
-    }
-    .yape-monto-grande span {
-        font-size: 2.1rem !important;
-        font-weight: 700;
-        margin-right: 8px;
-    }
-    .yape-destinatario {
-        color: #1e293b !important;
-        font-size: 1.5rem !important;
-        font-weight: 700;
         margin-bottom: 4px;
     }
-    .yape-timestamp {
-        color: #64748b !important;
-        font-size: 0.95rem !important;
-        margin-bottom: 25px;
-        padding-bottom: 15px;
-        border-bottom: 1px solid #e2e8f0;
+    .yape-logo-text {
+        font-size: 1.6rem;
+        color: #ffffff;
+        font-weight: 800;
+        font-style: italic;
+        line-height: 1;
+        letter-spacing: -1px;
     }
+
+    /* Grabado del Rostro Central */
+    .avatar-valdelomar {
+        width: 130px;
+        height: 130px;
+        border-radius: 50%;
+        border: 1px solid rgba(255,255,255,0.25);
+        background: radial-gradient(circle, rgba(138,43,226,0.3) 0%, rgba(74,18,84,0.8) 100%);
+        box-shadow: 0 0 30px rgba(0,0,0,0.4);
+    }
+    
+    /* Texto Derecha Grabado */
+    .txt-valdelomar {
+        position: absolute;
+        right: 25px;
+        color: rgba(255,255,255,0.4) !important;
+        font-family: 'Times New Roman', serif;
+        font-size: 0.85rem;
+        text-align: left;
+        line-height: 1.1;
+        letter-spacing: 1px;
+        font-weight: 400;
+    }
+
+    /* VOUCHER TARJETA BLANCA */
+    .yape-card-blanca {
+        background-color: #ffffff !important;
+        border-radius: 32px;
+        padding: 35px 30px;
+        margin: 0 15px;
+        text-align: left;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+    }
+
+    .yape-header-title {
+        color: #69167c !important;
+        font-size: 1.6rem !important;
+        font-weight: 700;
+        margin-bottom: 12px;
+    }
+
+    .yape-monto-grande {
+        color: #383344 !important;
+        font-size: 3.8rem !important;
+        font-weight: 700;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: baseline;
+        line-height: 1;
+    }
+    .yape-monto-grande span {
+        font-size: 2.2rem !important;
+        font-weight: 600;
+        margin-right: 6px;
+        color: #383344 !important;
+    }
+
+    .yape-destinatario {
+        color: #2c2536 !important;
+        font-size: 1.55rem !important;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+
+    .yape-timestamp {
+        color: #827e8c !important;
+        font-size: 1rem !important;
+        margin-bottom: 25px;
+        padding-bottom: 20px;
+        border-bottom: 1.5px solid #f0edf5;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    /* SECCIÓN TOKEN DE SEGURIDAD */
     .yape-token-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
         margin-bottom: 25px;
-        padding-bottom: 15px;
-        border-bottom: 1px solid #e2e8f0;
+        padding-bottom: 20px;
+        border-bottom: 1.5px solid #f0edf5;
     }
     .yape-token-title {
-        color: #64748b !important;
+        color: #827e8c !important;
         font-size: 0.85rem !important;
         font-weight: 700;
         text-transform: uppercase;
@@ -153,65 +182,73 @@ st.markdown("""
     }
     .yape-token-blocks {
         display: flex;
-        gap: 5px;
+        gap: 4px;
     }
     .yape-block-num {
-        background-color: #f8fafc;
-        color: #0f172a !important;
-        font-weight: 800;
-        font-size: 1.2rem;
-        width: 32px;
-        height: 36px;
+        background-color: #f4f1f7;
+        color: #2c2536 !important;
+        font-weight: 700;
+        font-size: 1.15rem;
+        width: 30px;
+        height: 34px;
         display: flex;
         justify-content: center;
         align-items: center;
-        border-radius: 8px;
-        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        border: 1px solid #e1dae8;
     }
+
+    /* SECCIÓN METADATOS */
     .yape-info-section-title {
-        color: #64748b !important;
-        font-size: 0.8rem !important;
+        color: #827e8c !important;
+        font-size: 0.85rem !important;
         font-weight: 700;
         text-transform: uppercase;
-        margin-bottom: 15px;
+        margin-bottom: 18px;
         letter-spacing: 0.5px;
     }
     .yape-meta-row {
         display: flex;
         justify-content: space-between;
-        margin-bottom: 14px;
-        font-size: 0.98rem;
+        margin-bottom: 16px;
+        font-size: 1.05rem;
+        line-height: 1.2;
     }
     .yape-meta-label {
-        color: #64748b !important;
+        color: #827e8c !important;
         font-weight: 500;
     }
     .yape-meta-value {
-        color: #0f172a !important;
-        font-weight: 700;
+        color: #2c2536 !important;
+        font-weight: 600;
+        text-align: right;
     }
+
+    /* BOTONES */
     .stButton>button {
         background-color: #00e6b3 !important;
-        color: #742284 !important;
-        font-weight: bold !important;
+        color: #69167c !important;
+        font-weight: 700 !important;
         border-radius: 25px !important;
         border: none !important;
-        padding: 10px 25px !important;
+        padding: 12px 25px !important;
         width: 100%;
+        font-size: 1.05rem !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
     .stButton>button:hover {
         background-color: #ffffff !important;
-        color: #742284 !important;
+        color: #69167c !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
 st.title("📊 Extractor de Facturas SUNAT")
-st.write("✨ **Motor de Alta Velocidad:** Procesamiento de comprobantes con el diseño e identidad de Yape.")
+st.write("✨ **Motor de Alta Velocidad:** Procesamiento paralelo de comprobantes con visualización nativa idéntica.")
 
 api_key = st.secrets.get("GEMINI_API_KEY", "")
 
-def consultar_gemini_api_directo(prompt, contenido_bytes=None, mime_type=None, api_key_str=""):
+def consulting_gemini_api_direct(prompt, contenido_bytes=None, mime_type=None, api_key_str=""):
     url = f"https://googleapis.com{api_key_str}"
     headers = {"Content-Type": "application/json"}
     partes = [{"text": prompt}]
@@ -250,20 +287,8 @@ def analizar_un_archivo_con_ia(archivo):
             serie, numero = id_comprobante.split("-", 1) if "-" in id_comprobante else (id_comprobante[:4], id_comprobante[4:])
             total_val = float(monto_total_xml.text) if monto_total_xml is not None else 0.0
             
-            res_txt = consultar_gemini_api_directo("Clasifica este proveedor en una categoría de gasto corta de 2 a 4 palabras. Responde SOLO la categoría.", api_key_str=api_key)
+            res_txt = consulting_gemini_api_direct("Clasifica este proveedor en una categoría de gasto corta de 2 a 4 palabras. Responde SOLO la categoría.", api_key_str=api_key)
             categoria_gasto = res_txt.strip()
         else:
             prompt_lineal = "Analiza este documento contable de Peru de forma exhaustiva y extrae la informacion requerida. Debes responder EXCLUSIVAMENTE un bloque de texto formateado en JSON estructurado. No incluyas marcas markdown de codigo como ```json ni texto adicional fuera de las llaves. Campos exactos a extraer: {\"ruc_emisor\": \"Numero de RUC de 11 digitos del vendedor emisor\", \"razon_social\": \"Nombre o denominacion social de la empresa emisora\", \"fecha_emision\": \"Fecha en formato AAAA-MM-DD\", \"serie\": \"Serie de 4 caracteres (ej. F001)\", \"numero\": \"Numero correlativo\", \"total\": 0.00, \"categoria_gasto\": \"Categoria corta de gasto\"}"
             mime_type = "image/jpeg" if ext in ["jpg", "jpeg", "png"] else "application/pdf"
-            texto_respuesta = consultar_gemini_api_directo(prompt_lineal, bytes_archivo, mime_type, api_key)
-            texto_respuesta = texto_respuesta.strip()
-            
-            if "{" in texto_respuesta:
-                texto_respuesta = texto_respuesta[texto_respuesta.find("{"):texto_respuesta.rfind("}")+1]
-            
-            data_ia = json.loads(texto_respuesta)
-            ruc = data_ia.get("ruc_emisor", "No encontrado")
-            proveedor = data_ia.get("razon_social", "No encontrado")
-            fecha = data_ia.get("fecha_emision", "No encontrado")
-            serie = data_ia.get("serie", "F001")
-            numero = data_ia.get("numero", "00000001")
