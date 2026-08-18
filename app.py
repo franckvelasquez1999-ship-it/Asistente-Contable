@@ -17,16 +17,13 @@ st.set_page_config(page_title="Asistente Contable", layout="wide")
 # 2. INYECCIÓN DE DISEÑO INTERFAZ CLONADA DE YAPE
 st.markdown("""
     <style>
-    /* Fondo morado Yape de la aplicación completa */
     .stApp { 
         background-color: #69167c !important; 
         font-family: 'Inter', -apple-system, sans-serif; 
     }
-    
     h1, h2, h3, h4, .stMarkdown p, p, span, label { 
         color: #ffffff !important; 
     }
-    
     .stFileUploader { 
         background-color: #7b258e !important; 
         border: 2px dashed #00e6b3 !important; 
@@ -34,8 +31,6 @@ st.markdown("""
         padding: 25px !important; 
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2) !important; 
     }
-
-    /* CONTENEDOR VOUCHER PRINCIPAL */
     .yape-voucher-completo {
         max-width: 440px;
         background-color: #69167c;
@@ -43,8 +38,6 @@ st.markdown("""
         text-align: center;
         padding-bottom: 20px;
     }
-
-    /* CABECERA: Fondo de líneas del billete y Abraham Valdelomar */
     .yape-banner-valdelomar {
         width: 100%;
         height: 220px;
@@ -59,8 +52,6 @@ st.markdown("""
         align-items: center;
         justify-content: center;
     }
-
-    /* Logo Redondo Yape Izquierda */
     .yape-logo-top {
         position: absolute;
         left: 25px;
@@ -89,8 +80,6 @@ st.markdown("""
         line-height: 1;
         letter-spacing: -1px;
     }
-
-    /* Grabado del Rostro Central */
     .avatar-valdelomar {
         width: 130px;
         height: 130px;
@@ -99,8 +88,6 @@ st.markdown("""
         background: radial-gradient(circle, rgba(138,43,226,0.3) 0%, rgba(74,18,84,0.8) 100%);
         box-shadow: 0 0 30px rgba(0,0,0,0.4);
     }
-    
-    /* Texto Derecha Grabado */
     .txt-valdelomar {
         position: absolute;
         right: 25px;
@@ -112,8 +99,6 @@ st.markdown("""
         letter-spacing: 1px;
         font-weight: 400;
     }
-
-    /* VOUCHER TARJETA BLANCA */
     .yape-card-blanca {
         background-color: #ffffff !important;
         border-radius: 32px;
@@ -122,14 +107,12 @@ st.markdown("""
         text-align: left;
         box-shadow: 0 15px 35px rgba(0,0,0,0.3);
     }
-
     .yape-header-title {
         color: #69167c !important;
         font-size: 1.6rem !important;
         font-weight: 700;
         margin-bottom: 12px;
     }
-
     .yape-monto-grande {
         color: #383344 !important;
         font-size: 3.8rem !important;
@@ -145,14 +128,12 @@ st.markdown("""
         margin-right: 6px;
         color: #383344 !important;
     }
-
     .yape-destinatario {
         color: #2c2536 !important;
         font-size: 1.55rem !important;
         font-weight: 700;
         margin-bottom: 8px;
     }
-
     .yape-timestamp {
         color: #827e8c !important;
         font-size: 1rem !important;
@@ -163,8 +144,6 @@ st.markdown("""
         align-items: center;
         gap: 6px;
     }
-
-    /* SECCIÓN TOKEN DE SEGURIDAD */
     .yape-token-row {
         display: flex;
         justify-content: space-between;
@@ -197,8 +176,6 @@ st.markdown("""
         border-radius: 6px;
         border: 1px solid #e1dae8;
     }
-
-    /* SECCIÓN METADATOS */
     .yape-info-section-title {
         color: #827e8c !important;
         font-size: 0.85rem !important;
@@ -223,8 +200,6 @@ st.markdown("""
         font-weight: 600;
         text-align: right;
     }
-
-    /* BOTONES */
     .stButton>button {
         background-color: #00e6b3 !important;
         color: #69167c !important;
@@ -289,6 +264,19 @@ def analizar_un_archivo_con_ia(archivo):
             
             res_txt = consulting_gemini_api_direct("Clasifica este proveedor en una categoría de gasto corta de 2 a 4 palabras. Responde SOLO la categoría.", api_key_str=api_key)
             categoria_gasto = res_txt.strip()
-        else:
+        
+        if ext != "xml":
             prompt_lineal = "Analiza este documento contable de Peru de forma exhaustiva y extrae la informacion requerida. Debes responder EXCLUSIVAMENTE un bloque de texto formateado en JSON estructurado. No incluyas marcas markdown de codigo como ```json ni texto adicional fuera de las llaves. Campos exactos a extraer: {\"ruc_emisor\": \"Numero de RUC de 11 digitos del vendedor emisor\", \"razon_social\": \"Nombre o denominacion social de la empresa emisora\", \"fecha_emision\": \"Fecha en formato AAAA-MM-DD\", \"serie\": \"Serie de 4 caracteres (ej. F001)\", \"numero\": \"Numero correlativo\", \"total\": 0.00, \"categoria_gasto\": \"Categoria corta de gasto\"}"
-            mime_type = "image/jpeg" if ext in ["jpg", "jpeg", "png"] else "application/pdf"
+            mime_type = "application/pdf"
+            if ext in ["jpg", "jpeg", "png"]:
+                mime_type = "image/jpeg"
+                
+            texto_respuesta = consulting_gemini_api_direct(prompt_lineal, bytes_archivo, mime_type, api_key)
+            texto_respuesta = texto_respuesta.strip()
+            
+            if "{" in texto_respuesta:
+                texto_respuesta = texto_respuesta[texto_respuesta.find("{"):texto_respuesta.rfind("}")+1]
+            
+            data_ia = json.loads(texto_respuesta)
+            ruc = data_ia.get("ruc_emisor", "No encontrado")
+
