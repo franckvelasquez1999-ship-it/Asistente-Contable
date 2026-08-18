@@ -31,13 +31,26 @@ api_key = st.secrets.get("GEMINI_API_KEY", "")
 if api_key:
     genai.configure(api_key=api_key)
 
+# FUNCIÓN PARA NORMALIZAR EXTRACTOS DE FECHA DE MANERA SEGURA
+def normalizar_fecha(texto_fecha):
+    if not texto_fecha or texto_fecha == "No encontrado":
+        return "No encontrado"
+    # Extraer los dígitos numéricos encontrados en la cadena
+    numeros = re.findall(r'\d+', texto_fecha)
+    if len(numeros) >= 3:
+        # Si viene como YYYY, MM, DD
+        if len(numeros[0]) == 4:
+            return f"{numeros[0]}-{numeros[1].zfill(2)}-{numeros[2].zfill(2)}"
+        # Si viene como DD, MM, YYYY
+        elif len(numeros[2]) == 4:
+            return f"{numeros[2]}-{numeros[1].zfill(2)}-{numeros[0].zfill(2)}"
+    return "No encontrado"
+
 # FUNCIÓN INDEPENDIENTE PARA PROCESAR CON LA IA
 def analizar_un_archivo_con_ia(archivo):
     try:
         ext = archivo.name.split(".")[-1].lower()
         bytes_archivo = archivo.read()
-        
-        ruc, proveedor, fecha, serie, numero, total, categoria_gasto = "No encontrado", "No encontrado", "No encontrado", "F001", "00000001", 0.0, "Por clasificar"
         
         if ext == "xml":
             archivo.seek(0)
@@ -57,34 +70,57 @@ def analizar_un_archivo_con_ia(archivo):
             total = float(monto_total_xml.text) if monto_total_xml is not None else 0.0
             
             model_text = genai.GenerativeModel('gemini-1.5-flash')
-            res_txt = model_text.generate_content(f"Clasifica '{proveedor}' en una categoría de gasto corta de 2 a 4 palabras. Responde SOLO la categoría.")
+            res_txt = model_text.generate_content(f"Clasifica '{proveedor}' en una categoría de gasto contable empresarial de 2 a 4 palabras. Responde SOLO la categoría sin puntuación.")
             categoria_gasto = res_txt.text.strip()
             
             return construir_diccionario_factura(fecha, serie, numero, ruc, proveedor, total, categoria_gasto, archivo.name)
 
+        # PROMPT ULTRA-ESTRICTO CORREGIDO PARA EVITAR EL "NO ENCONTRADO"
         model = genai.GenerativeModel('gemini-1.5-flash')
-        prompt = "Analiza este comprobante de pago de Perú y extrae exclusivamente los siguientes campos en un formato JSON limpio y válido, sin bloques de código: {\"ruc_emisor\": \"RUC de 11 dígitos\", \"razon_social\": \"Nombre proveedor\", \"fecha_emision\": \"AAAA-MM-DD\", \"serie\": \"Serie\", \"numero\": \"Número correlativo\", \"total\": 0.00, \"categoria_gasto\": \"Categoría contable corta de 2 a 4 palabras\"}"
+        prompt = """
+        Analiza este documento contable de Perú de forma exhaustiva y extrae la información requerida.
+        Entrega la respuesta EXCLUSIVAMENTE en un formato JSON plano, válido, sin textos alternativos ni bloques markdown de código.
+        
+        Reglas obligatorias de extracción:
+        1. 'ruc_emisor': Busca el número de 11 dígitos que empieza por 10 o 20 (RUC del Proveedor). No te confundas con el RUC del cliente.
+        2. 'razon_social': Nombre de la empresa emisora que vende el servicio/producto.
+        3. 'fecha_emision': Devuélvela estrictamente en formato AAAA-MM-DD.
+        4. 'serie': Código alfa-numérico de 4 caracteres (Ej: F001, E001).
+        5. 'numero': El número correlativo de la factura (omite ceros a la izquierda sobrantes si lo deseas, pero mantén consistencia).
+        6. 'total': Monto total final cobrado como número flotante (remueve símbolos S/ o comas).
+        7. 'categoria_gasto': Analiza el nombre de la empresa emisora y asígnale una categoría de gasto (Ej: 'Gastos de Alimentos', 'Servicios Básicos', 'Útiles de Oficina', 'Software').
+
+        Formato de salida esperado:
+        {"ruc_emisor": "11_digitos", "razon_social": "TEXTO", "fecha_emision": "AAAA-MM-DD", "serie": "TEXTO", "numero": "TEXTO", "total": 0.00, "categoria_gasto": "TEXTO"}
+        """
         
         if ext in ["jpg", "jpeg", "png"]:
             img = Image.open(io.BytesIO(bytes_archivo))
             img = img.convert("RGB")
             out_img = io.BytesIO()
-            img.save(out_img, format="JPEG", quality=40)
+            img.save(out_img, format="JPEG", quality=50) # Subimos a 50 la calidad para asegurar lectura del texto del RUC
             documento_data = {'mime_type': 'image/jpeg', 'data': out_img.getvalue()}
         else:
             documento_data = {'mime_type': 'application/pdf', 'data': bytes_archivo}
             
         response = model.generate_content([prompt, documento_data])
-        texto_respuesta = re.sub(r'```json\s*|\s*```', '', response.text.strip())
+        
+        # Limpieza de cualquier bloque de código devuelto por error
+        texto_respuesta = response.text.strip()
+        texto_respuesta = re.sub(r'```json\s*|\s*```', '', texto_respuesta)
+        
         data_ia = json.loads(texto_respuesta)
         
+        fecha_normalizada = normalizar_fecha(data_ia.get("fecha_emision"))
+        
         return construir_diccionario_factura(
-            data_ia.get("fecha_emision"), data_ia.get("serie"), data_ia.get("numero"),
+            fecha_normalizada, data_ia.get("serie"), data_ia.get("numero"),
             data_ia.get("ruc_emisor"), data_ia.get("razon_social"), float(data_ia.get("total", 0.0)),
             data_ia.get("categoria_gasto"), archivo.name
         )
-    except Exception:
-        return construir_diccionario_factura("No encontrado", "F001", "00000001", "No encontrado", "No encontrado", 0.0, "Por clasificar", archivo.name)
+    except Exception as e:
+        # Devolver una fila indicando el error de lectura sin romper el flujo paralelo
+        return construir_diccionario_factura("No encontrado", "Error", "Error", "No encontrado", f"Error parseo archivo ({archivo.name})", 0.0, "Por clasificar", archivo.name)
 
 def construir_diccionario_factura(fecha, serie, numero, ruc, proveedor, total, categoria_gasto, nombre_archivo):
     base_imponible = round(total / 1.18, 2)
@@ -92,16 +128,23 @@ def construir_diccionario_factura(fecha, serie, numero, ruc, proveedor, total, c
     
     periodo_ejemplo = "202608"
     if fecha and fecha != "No encontrado" and "-" in fecha:
-        anio_f, mes_f, dia_f = fecha.split("-")
-        fecha_sire = f"{dia_f}/{mes_f}/{anio_f}"
-        periodo_ejemplo = f"{anio_f}{mes_f}"
+        try:
+            partes = fecha.split("-")
+            if len(partes) == 3:
+                anio_f, mes_f, dia_f = partes
+                fecha_sire = f"{dia_f}/{mes_f}/{anio_f}"
+                periodo_ejemplo = f"{anio_f}{mes_f}"
+            else:
+                fecha_sire = fecha
+        except Exception:
+            fecha_sire = fecha
     else:
         fecha_sire = fecha if fecha else "No encontrado"
         
     return {
         "Periodo": periodo_ejemplo, "Fecha Emisión": fecha_sire, "Tipo Comp.": "01",
-        "Serie": serie if serie else "F001", "Número": numero if numero else "00000001",
-        "Tipo Doc Identidad": "6", "RUC Emisor": ruc if ruc else "No encontrado",
+        "Serie": str(serie) if serie else "F001", "Número": str(numero) if numero else "00000001",
+        "Tipo Doc Identidad": "6", "RUC Emisor": str(ruc) if ruc else "No encontrado",
         "Razón Social": proveedor if proveedor else "No encontrado",
         "Base Imponible S/": base_imponible, "IGV S/": igv, "Total S/": total,
         "Categoría IA (Gasto)": categoria_gasto if categoria_gasto else "Por clasificar",
@@ -129,18 +172,13 @@ if archivos_subidos:
         col3.metric("Total Facturado", f"S/ {df['Total S/'].sum():,.2f}")
         
         st.subheader("💾 Descarga de Documentos Consolidados")
+        
+        # Corrección de formato para evitar fallas de conversión a cadenas de texto
         lineas_txt = [f"{r['Periodo']}|{r['RUC Emisor']}-{r['Serie']}-{r['Número']}|{r['Fecha Emisión']}||01|{r['Serie']}|{r['Número']}||6|{r['RUC Emisor']}|{r['Razón Social']}|{r['Base Imponible S/']:.2f}|{r['IGV S/']:.2f}||||||{r['Total S/']:.2f}|||1|||" for i, r in df.iterrows()]
         contenido_txt = "\r\n".join(lineas_txt) + "\r\n"
         
+        # Dinamizamos el nombre oficial del archivo TXT usando el primer periodo detectado
+        periodo_detectado = df.iloc[0]["Periodo"] if not df.empty else "202608"
         ruc_cliente_ejemplo = "20123456789"
-        nombre_txt_oficial = f"LE{ruc_cliente_ejemplo}2026080000080400001111.txt"
-        
-        b1, b2 = st.columns(2)
-        with b1:
-            st.download_button("📥 Descargar Archivo Plano SIRE (.txt)", data=contenido_txt, file_name=nombre_txt_oficial, mime="text/plain")
-        with b2:
-            out = io.BytesIO()
-            with pd.ExcelWriter(out, engine='openpyxl') as w: df.drop(columns=["Archivo Original"]).to_excel(w, index=False)
-            st.download_button("📥 Descargar Reporte en Excel (.xlsx)", data=out.getvalue(), file_name="reporte_control_sire.xlsx")
 
 
