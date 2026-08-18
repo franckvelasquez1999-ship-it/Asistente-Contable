@@ -131,7 +131,7 @@ if archivos_subidos:
         df = pd.DataFrame(datos_facturas)
         st.success(f"¡Se consolidaron con éxito {len(datos_facturas)} documentos en alta velocidad!")
         st.dataframe(df.drop(columns=["Archivo Original"]), use_container_width=True)
-        
+
         # Tarjetas de Totales
         col1, col2, col3 = st.columns(3)
         col1.metric("Total Base Imponible", f"S/ {df['Base Imponible S/'].sum():,.2f}")
