@@ -17,18 +17,13 @@ st.set_page_config(page_title="Extractor SIRE - Estilo Yape", layout="wide")
 # 2. INYECCIÓN DE DISEÑO INTERFAZ YAPE PREMIUM
 st.markdown("""
     <style>
-    /* Fondo morado Yape oficial de la aplicación */
     .stApp { 
         background-color: #742284 !important; 
         font-family: 'Inter', sans-serif; 
     }
-    
-    /* Configuración de textos fijos */
     h1, h2, h3, h4, .stMarkdown p, p, span, label { 
         color: #ffffff !important; 
     }
-    
-    /* Zona de carga de archivos (Drag & Drop) */
     .stFileUploader { 
         background-color: #8c339c !important; 
         border: 2px dashed #00e6b3 !important; 
@@ -36,8 +31,6 @@ st.markdown("""
         padding: 25px !important; 
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2) !important; 
     }
-
-    /* DISEÑO DEL VOUCHER FIEL A LA IMAGEN DE YAPE */
     .yape-voucher-completo {
         max-width: 450px;
         background-color: #742284;
@@ -47,8 +40,6 @@ st.markdown("""
         text-align: center;
         box-shadow: 0 20px 50px rgba(0,0,0,0.5);
     }
-
-    /* BANNER SUPERIOR: Textura y Retrato de Valdelomar */
     .yape-banner-valdelomar {
         width: 100%;
         height: 180px;
@@ -60,8 +51,6 @@ st.markdown("""
         align-items: center;
         justify-content: center;
     }
-
-    /* Logo Circular Yape */
     .yape-logo-top {
         position: absolute;
         left: 25px;
@@ -89,8 +78,6 @@ st.markdown("""
         font-style: italic;
         font-family: sans-serif;
     }
-
-    /* Ilustración Abraham Valdelomar Simulada con CSS */
     .avatar-valdelomar {
         width: 110px;
         height: 110px;
@@ -109,8 +96,6 @@ st.markdown("""
         line-height: 1.1;
         letter-spacing: 1px;
     }
-
-    /* TARJETA BLANCA FLOTANTE INTERNA */
     .yape-card-blanca {
         background-color: #ffffff !important;
         border-radius: 28px;
@@ -119,14 +104,12 @@ st.markdown("""
         text-align: left;
         box-shadow: 0 10px 25px rgba(0,0,0,0.2);
     }
-
     .yape-header-title {
         color: #742284 !important;
         font-size: 1.65rem !important;
         font-weight: 800;
         margin-bottom: 5px;
     }
-
     .yape-monto-grande {
         color: #3b3b3b !important;
         font-size: 3.4rem !important;
@@ -140,14 +123,12 @@ st.markdown("""
         font-weight: 700;
         margin-right: 8px;
     }
-
     .yape-destinatario {
         color: #1e293b !important;
         font-size: 1.5rem !important;
         font-weight: 700;
         margin-bottom: 4px;
     }
-
     .yape-timestamp {
         color: #64748b !important;
         font-size: 0.95rem !important;
@@ -155,8 +136,6 @@ st.markdown("""
         padding-bottom: 15px;
         border-bottom: 1px solid #e2e8f0;
     }
-
-    /* TOKEN DE SEGURIDAD DIGITAL */
     .yape-token-row {
         display: flex;
         justify-content: space-between;
@@ -189,8 +168,6 @@ st.markdown("""
         border-radius: 8px;
         border: 1px solid #cbd5e1;
     }
-
-    /* FILAS DE INFORMACIÓN DE TRANSACCIÓN */
     .yape-info-section-title {
         color: #64748b !important;
         font-size: 0.8rem !important;
@@ -213,8 +190,6 @@ st.markdown("""
         color: #0f172a !important;
         font-weight: 700;
     }
-
-    /* Estilos globales para botones de descarga inferiores */
     .stButton>button {
         background-color: #00e6b3 !important;
         color: #742284 !important;
@@ -236,33 +211,23 @@ st.write("✨ **Motor de Alta Velocidad:** Procesamiento de comprobantes con el 
 
 api_key = st.secrets.get("GEMINI_API_KEY", "")
 
-# FUNCIÓN HTTP DIRECTA COMPATIBLE CON GEMINI
 def consultar_gemini_api_directo(prompt, contenido_bytes=None, mime_type=None, api_key_str=""):
     url = f"https://googleapis.com{api_key_str}"
     headers = {"Content-Type": "application/json"}
-    
     partes = [{"text": prompt}]
     if contenido_bytes and mime_type:
         base64_data = base64.b64encode(contenido_bytes).decode("utf-8")
-        partes.append({
-            "inlineData": {
-                "mimeType": mime_type,
-                "data": base64_data
-            }
-        })
-        
+        partes.append({"inlineData": {"mimeType": mime_type, "data": base64_data}})
     payload = {"contents": [{"parts": partes}]}
     response = requests.post(url, headers=headers, json=payload, timeout=30)
-    
     if response.status_code == 200:
         try:
             return response.json()["candidates"]["content"]["parts"]["text"]
         except (KeyError, IndexError):
-            raise Exception("Respuesta con estructura inesperada de Google.")
+            raise Exception("Respuesta con estructura inesperada.")
     else:
-        raise Exception(f"Error del servidor Google (HTTP {response.status_code})")
+        raise Exception(f"Error HTTP {response.status_code}")
 
-# FUNCIÓN PARA PROCESAR LOS ARCHIVOS
 def analizar_un_archivo_con_ia(archivo):
     try:
         ext = archivo.name.split(".")[-1].lower()
@@ -288,4 +253,17 @@ def analizar_un_archivo_con_ia(archivo):
             res_txt = consultar_gemini_api_directo("Clasifica este proveedor en una categoría de gasto corta de 2 a 4 palabras. Responde SOLO la categoría.", api_key_str=api_key)
             categoria_gasto = res_txt.strip()
         else:
-            # Prompt unificado en una sola línea continua para evitar errores de triple comilla (SyntaxError)
+            prompt_lineal = "Analiza este documento contable de Peru de forma exhaustiva y extrae la informacion requerida. Debes responder EXCLUSIVAMENTE un bloque de texto formateado en JSON estructurado. No incluyas marcas markdown de codigo como ```json ni texto adicional fuera de las llaves. Campos exactos a extraer: {\"ruc_emisor\": \"Numero de RUC de 11 digitos del vendedor emisor\", \"razon_social\": \"Nombre o denominacion social de la empresa emisora\", \"fecha_emision\": \"Fecha en formato AAAA-MM-DD\", \"serie\": \"Serie de 4 caracteres (ej. F001)\", \"numero\": \"Numero correlativo\", \"total\": 0.00, \"categoria_gasto\": \"Categoria corta de gasto\"}"
+            mime_type = "image/jpeg" if ext in ["jpg", "jpeg", "png"] else "application/pdf"
+            texto_respuesta = consultar_gemini_api_directo(prompt_lineal, bytes_archivo, mime_type, api_key)
+            texto_respuesta = texto_respuesta.strip()
+            
+            if "{" in texto_respuesta:
+                texto_respuesta = texto_respuesta[texto_respuesta.find("{"):texto_respuesta.rfind("}")+1]
+            
+            data_ia = json.loads(texto_respuesta)
+            ruc = data_ia.get("ruc_emisor", "No encontrado")
+            proveedor = data_ia.get("razon_social", "No encontrado")
+            fecha = data_ia.get("fecha_emision", "No encontrado")
+            serie = data_ia.get("serie", "F001")
+            numero = data_ia.get("numero", "00000001")
