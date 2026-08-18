@@ -5,28 +5,22 @@ from datetime import datetime
 # 1. Configuración de la página del simulador
 st.set_page_config(page_title="Simulador de Constancias Yape", layout="centered")
 
-# 2. INYECCIÓN DE DISEÑO INTERFAZ DE YAPE PREMIUM
+# 2. INYECCIÓN DE DISEÑO INTERFAZ DE YAPE PREMIUM (Aquí está el CSS metido de forma correcta)
 st.markdown("""
     <style>
-    /* Fondo morado Yape de la aplicación completa */
     .stApp { 
         background-color: #69167c !important; 
         font-family: 'Inter', -apple-system, sans-serif; 
     }
-    
     h1, h2, h3, p, span, label { 
         color: #ffffff !important; 
     }
-    
-    /* Estilos para el formulario de entrada */
     .stTextInput>div>div>input, .stNumberInput>div>div>input, .stSelectbox>div>div>div {
         background-color: #7b258e !important;
         color: #ffffff !important;
         border: 1px solid #00e6b3 !important;
         border-radius: 10px !important;
     }
-
-    /* CONTENEDOR VOUCHER PRINCIPAL */
     .yape-voucher-completo {
         max-width: 440px;
         background-color: #69167c;
@@ -34,8 +28,6 @@ st.markdown("""
         text-align: center;
         padding-bottom: 20px;
     }
-
-    /* CABECERA: Fondo de líneas del billete y Abraham Valdelomar */
     .yape-banner-valdelomar {
         width: 100%;
         height: 220px;
@@ -50,8 +42,6 @@ st.markdown("""
         align-items: center;
         justify-content: center;
     }
-
-    /* Logo Redondo Yape Izquierda */
     .yape-logo-top {
         position: absolute;
         left: 25px;
@@ -80,8 +70,6 @@ st.markdown("""
         line-height: 1;
         letter-spacing: -1px;
     }
-
-    /* Grabado del Rostro Central */
     .avatar-valdelomar {
         width: 130px;
         height: 130px;
@@ -90,8 +78,6 @@ st.markdown("""
         background: radial-gradient(circle, rgba(138,43,226,0.3) 0%, rgba(74,18,84,0.8) 100%);
         box-shadow: 0 0 30px rgba(0,0,0,0.4);
     }
-    
-    /* Texto Derecha Grabado */
     .txt-valdelomar {
         position: absolute;
         right: 25px;
@@ -103,8 +89,6 @@ st.markdown("""
         letter-spacing: 1px;
         font-weight: 400;
     }
-
-    /* VOUCHER TARJETA BLANCA */
     .yape-card-blanca {
         background-color: #ffffff !important;
         border-radius: 32px;
@@ -113,14 +97,12 @@ st.markdown("""
         text-align: left;
         box-shadow: 0 15px 35px rgba(0,0,0,0.3);
     }
-
     .yape-header-title {
         color: #69167c !important;
         font-size: 1.6rem !important;
         font-weight: 700;
         margin-bottom: 12px;
     }
-
     .yape-monto-grande {
         color: #383344 !important;
         font-size: 3.8rem !important;
@@ -136,14 +118,12 @@ st.markdown("""
         margin-right: 6px;
         color: #383344 !important;
     }
-
     .yape-destinatario {
         color: #2c2536 !important;
         font-size: 1.55rem !important;
         font-weight: 700;
         margin-bottom: 8px;
     }
-
     .yape-timestamp {
         color: #827e8c !important;
         font-size: 1rem !important;
@@ -154,8 +134,6 @@ st.markdown("""
         align-items: center;
         gap: 6px;
     }
-
-    /* SECCIÓN TOKEN DE SEGURIDAD */
     .yape-token-row {
         display: flex;
         justify-content: space-between;
@@ -188,8 +166,6 @@ st.markdown("""
         border-radius: 6px;
         border: 1px solid #e1dae8;
     }
-
-    /* SECCIÓN METADATOS */
     .yape-info-section-title {
         color: #827e8c !important;
         font-size: 0.85rem !important;
@@ -214,8 +190,6 @@ st.markdown("""
         font-weight: 600;
         text-align: right;
     }
-
-    /* BOTÓN GENERAR */
     .stButton>button {
         background-color: #00e6b3 !important;
         color: #69167c !important;
@@ -267,11 +241,11 @@ if st.button("🚀 Generar Nuevo Comprobante Único"):
     fecha_actual = datetime.now()
     mes_formateado = meses_es.get(fecha_actual.strftime("%b"), "ago.")
     timestamp_yape = f"{fecha_actual.strftime('%d')} {mes_formateado} {fecha_actual.strftime('%Y')} | {fecha_actual.strftime('%I:%M %p.').lower()}"
+    monto_formateado = f"{monto_envio:,.2f}"
 
-    # ESTRUCTURA HTML DE LA CONSTANCIA REQUERIDA
-    html_constancia = f"""
+    # ESTRUCTURA HTML DE LA CONSTANCIA REQUERIDA SIN F-STRINGS ANIDADAS (EVITA EL SYNTAXERROR)
+    plantilla_html = """
     <div class="yape-voucher-completo">
-        <!-- BANNER DE SEGURIDAD (BILLETE ABRAHAM VALDELOMAR) -->
         <div class="yape-banner-valdelomar">
             <div class="yape-logo-top">
                 <div class="yape-logo-circle">S/</div>
@@ -281,35 +255,42 @@ if st.button("🚀 Generar Nuevo Comprobante Único"):
             <div class="txt-valdelomar">ABRAHAM<br>VALDELOMAR</div>
         </div>
         
-        <!-- CUERPO DEL COMPROBANTE BLANCO -->
         <div class="yape-card-blanca">
             <div class="yape-header-title">¡Yapeaste!</div>
-            <div class="yape-monto-grande"><span>S/</span>{monto_envio:,.2f}</div>
-            <div class="yape-destinatario">{nombre_destinatario}</div>
-            <div class="yape-timestamp">📅 {timestamp_yape}</div>
+            <div class="yape-monto-grande"><span>S/</span>__MONTO__</div>
+            <div class="yape-destinatario">__NOMBRE__</div>
+            <div class="yape-timestamp">📅 __FECHA__</div>
             
-            <!-- BLOQUE DE CÓDIGO DE SEGURIDAD DINÁMICO -->
             <div class="yape-token-row">
                 <div class="yape-token-title">Código de seguridad</div>
                 <div class="yape-token-blocks">
-                    <div class="yape-block-num">{cod_seguridad_1}</div>
-                    <div class="yape-block-num">{cod_seguridad_2}</div>
-                    <div class="yape-block-num">{cod_seguridad_3}</div>
+                    <div class="yape-block-num">__TOK1__</div>
+                    <div class="yape-block-num">__TOK2__</div>
+                    <div class="yape-block-num">__TOK3__</div>
                 </div>
             </div>
             
-            <!-- SECCIÓN METADATOS DE TRANSACCIÓN -->
             <div class="yape-info-section-title">Datos de la transacción</div>
             <div class="yape-meta-row">
                 <span class="yape-meta-label">Nro. de celular</span>
-                <span class="yape-meta-value">{numero_celular}</span>
+                <span class="yape-meta-value">__CEL__</span>
             </div>
             <div class="yape-meta-row">
                 <span class="yape-meta-label">Destino</span>
-                <span class="yape-meta-value">{banco_destino}</span>
+                <span class="yape-meta-value">__BANCO__</span>
             </div>
             <div class="yape-meta-row">
+                <span class="yape-meta-label">Nro. de operación</span>
+                <span class="yape-meta-value">__NRO__</span>
+            </div>
+        </div>
+    </div>
+    """
+    
+    # Reemplazo de variables seguro para blindar la app
+    html_constancia = plantilla_html.replace("__MONTO__", monto_formateado)\
+                                    .replace("__NOMBRE__", nombre_destinatario)\
+                                    .replace("__FECHA__", timestamp_yape)\
+                                    .replace("__TOK1__", cod_seguridad_1)\
+                                    .replace("__TOK2__", cod_seguridad_2)\
 
-
-# Renderizar el canvas interactivo
-st.components.v1.html(html_juego, height=530, scrolling=False)
