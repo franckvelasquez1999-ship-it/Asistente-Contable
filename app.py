@@ -143,7 +143,7 @@ if archivos_subidos:
         contenido_txt = "\r\n".join(lineas_txt) + "\r\n"
         
         ruc_cliente_ejemplo = "20123456789"
-        periodo_ejemplo = df.iloc[0]["Periodo"] if not df.empty else "202608"
+        periodo_ejemplo = "202608"
         nombre_txt_oficial = f"LE{ruc_cliente_ejemplo}{periodo_ejemplo}00080400001111.txt"
         
         b1, b2 = st.columns(2)
