@@ -17,18 +17,13 @@ st.set_page_config(page_title="Extractor SIRE - Estilo Yape", layout="wide")
 # 2. INYECCIÓN DE DISEÑO INTERFAZ YAPE PREMIUM
 st.markdown("""
     <style>
-    /* Fondo morado Yape oficial de la aplicación */
     .stApp { 
         background-color: #742284 !important; 
         font-family: 'Inter', sans-serif; 
     }
-    
-    /* Configuración de textos fijos */
     h1, h2, h3, h4, .stMarkdown p, p, span, label { 
         color: #ffffff !important; 
     }
-    
-    /* Zona de carga de archivos (Drag & Drop) */
     .stFileUploader { 
         background-color: #8c339c !important; 
         border: 2px dashed #00e6b3 !important; 
@@ -36,8 +31,6 @@ st.markdown("""
         padding: 25px !important; 
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2) !important; 
     }
-
-    /* CONTENEDOR DE LA CONSTANCIA ESTILO VOUCHER YAPE */
     .yape-container {
         max-width: 420px;
         background: #742284;
@@ -48,8 +41,6 @@ st.markdown("""
         text-align: center;
         overflow: hidden;
     }
-    
-    /* Cabecera decorativa del voucher */
     .yape-header-art {
         background-color: #631971;
         padding: 20px;
@@ -58,8 +49,6 @@ st.markdown("""
         letter-spacing: 1px;
         border-bottom: 2px solid rgba(255,255,255,0.1);
     }
-    
-    /* Tarjeta Blanca Central del Voucher */
     .yape-card {
         background-color: #ffffff !important;
         border-radius: 24px;
@@ -67,34 +56,29 @@ st.markdown("""
         margin: 15px;
         text-align: left;
     }
-    
     .yape-title {
         color: #742284 !important;
         font-size: 1.6rem !important;
         font-weight: 800;
         margin-bottom: 5px;
     }
-    
     .yape-monto {
         color: #2b2b2b !important;
         font-size: 2.8rem !important;
         font-weight: 800;
         margin: 10px 0;
     }
-    
     .yape-monto-simbolo {
         font-size: 1.8rem !important;
         color: #2b2b2b !important;
         font-weight: 700;
     }
-    
     .yape-usuario {
         color: #333333 !important;
         font-size: 1.3rem !important;
         font-weight: 700;
         margin-bottom: 5px;
     }
-    
     .yape-fecha {
         color: #727272 !important;
         font-size: 0.95rem !important;
@@ -102,8 +86,6 @@ st.markdown("""
         border-bottom: 1px solid #e2e8f0;
         padding-bottom: 15px;
     }
-    
-    /* Sección del Código de Seguridad de 3 dígitos */
     .yape-seguridad-box {
         display: flex;
         justify-content: space-between;
@@ -112,19 +94,16 @@ st.markdown("""
         border-bottom: 1px solid #e2e8f0;
         padding-bottom: 15px;
     }
-    
     .yape-seguridad-label {
         color: #7c7c7c !important;
         font-size: 0.85rem !important;
         font-weight: 700;
         text-transform: uppercase;
     }
-    
     .yape-token-container {
         display: flex;
         gap: 6px;
     }
-    
     .yape-digit {
         background-color: #f1f5f9;
         color: #1e293b !important;
@@ -134,27 +113,21 @@ st.markdown("""
         border-radius: 6px;
         border: 1px solid #cbd5e1;
     }
-    
-    /* Filas de Información de la Transacción */
     .yape-row {
         display: flex;
         justify-content: space-between;
         margin-bottom: 12px;
         font-size: 0.95rem;
     }
-    
     .yape-label {
         color: #7c7c7c !important;
         font-weight: 500;
     }
-    
     .yape-value {
         color: #1a1a1a !important;
         font-weight: 700;
         text-align: right;
     }
-    
-    /* Estilos globales para botones de descarga inferiores */
     .stButton>button {
         background-color: #00e6b3 !important;
         color: #742284 !important;
@@ -176,24 +149,15 @@ st.write("✨ **Motor de Alta Velocidad:** Procesamiento de comprobantes con el 
 
 api_key = st.secrets.get("GEMINI_API_KEY", "")
 
-# FUNCIÓN HTTP DIRECTA COMPATIBLE CON GEMINI
 def consultar_gemini_api_directo(prompt, contenido_bytes=None, mime_type=None, api_key_str=""):
     url = f"https://googleapis.com{api_key_str}"
     headers = {"Content-Type": "application/json"}
-    
     partes = [{"text": prompt}]
     if contenido_bytes and mime_type:
         base64_data = base64.b64encode(contenido_bytes).decode("utf-8")
-        partes.append({
-            "inlineData": {
-                "mimeType": mime_type,
-                "data": base64_data
-            }
-        })
-        
+        partes.append({"inlineData": {"mimeType": mime_type, "data": base64_data}})
     payload = {"contents": [{"parts": partes}]}
     response = requests.post(url, headers=headers, json=payload, timeout=30)
-    
     if response.status_code == 200:
         try:
             return response.json()["candidates"][0]["content"]["parts"][0]["text"]
@@ -202,7 +166,6 @@ def consultar_gemini_api_directo(prompt, contenido_bytes=None, mime_type=None, a
     else:
         raise Exception(f"Error del servidor Google (HTTP {response.status_code})")
 
-# FUNCIÓN PARA PROCESAR LOS ARCHIVOS
 def analizar_un_archivo_con_ia(archivo):
     try:
         ext = archivo.name.split(".")[-1].lower()
@@ -246,7 +209,6 @@ def analizar_un_archivo_con_ia(archivo):
             mime_type = "image/jpeg" if ext in ["jpg", "jpeg", "png"] else "application/pdf"
             texto_respuesta = consultar_gemini_api_directo(prompt, bytes_archivo, mime_type, api_key)
             texto_respuesta = texto_respuesta.strip()
-            
             if "{" in texto_respuesta:
                 texto_respuesta = texto_respuesta[texto_respuesta.find("{"):texto_respuesta.rfind("}")+1]
             
@@ -262,7 +224,6 @@ def analizar_un_archivo_con_ia(archivo):
         base_imponible = round(total_val / 1.18, 2)
         igv = round(total_val - base_imponible, 2)
         
-        # Formatear la fecha para SUNAT (DD/MM/AAAA)
         fecha_sire = fecha
         periodo_sire = "202608"
         if fecha and "-" in str(fecha):
@@ -286,4 +247,18 @@ def analizar_un_archivo_con_ia(archivo):
             "Categoría IA (Gasto)": str(categoria_gasto)
         }
     except Exception as e:
+        return {"Periodo": "202608", "Fecha Emisión": "18/08/2026", "Tipo Comp.": "01", "Serie": "F001", "Número": "00000001", "Tipo Doc Identidad": "6", "RUC Emisor": "Error", "Razón Social": f"Fallo: {str(e)}", "Base Imponible S/": 0.0, "IGV S/": 0.0, "Total S/": 0.0, "Categoría IA (Gasto)": "Error"}
+
+archivos_subidos = st.file_uploader("Sube tus comprobantes masivos (XML, PDF, JPG, PNG)", type=["xml", "pdf", "jpg", "png"], accept_multiple_files=True)
+
+if archivos_subidos:
+    datos_facturas = []
+    st.info("🚀 **Motor asíncrono activado:** Consultando archivos en paralelo...")
+    
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        resultados = executor.map(analizar_un_archivo_con_ia, archivos_subidos)
+        datos_facturas = list(resultados)
+
+    if datos_facturas:
+        df = pd.DataFrame(datos_facturas)
 
