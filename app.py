@@ -6,7 +6,7 @@ from groq import Groq
 # Configuración de la pestaña en la nube
 st.set_page_config(page_title="Asistente Contable", layout="wide")
 
-st.title("📊 Extractor de Facturas SUNAT (Versión Nube)")
+st.title("📊 Extractor de Facturas SUNAT ")
 st.write("Sistema en la nube con cálculo automático de impuestos y clasificación inteligente de gastos.")
 
 # Conexión segura con la IA en la nube (Groq)
