@@ -23,7 +23,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 st.title("📊 Extractor de Facturas SUNAT")
-st.write("✨ **IDP Multimodal:** Procesamiento inteligente de documentos XML, PDF e imágenes impulsado por Google Gemini.")
+st.write("✨ **IDP Multimodal:** Procesamiento inteligente de documentos.")
 
 # Configurar la conexión con Gemini
 api_key = st.secrets.get("GEMINI_API_KEY", "")
