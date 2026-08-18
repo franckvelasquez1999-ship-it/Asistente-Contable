@@ -31,21 +31,23 @@ api_key = st.secrets.get("GEMINI_API_KEY", "")
 if api_key:
     genai.configure(api_key=api_key)
 
-# FUNCIÓN PARA NORMALIZAR FECHAS DE MANERA SEGURA
+# FUNCIÓN PARA NORMALIZAR FECHAS DE MANERA SEGURA (CORREGIDA CON ÍNDICES)
 def normalizar_fecha(texto_fecha):
     if not texto_fecha or texto_fecha == "No encontrado":
         return "No encontrado"
     
-    numeros = re.findall(r'\d+', str(texto_fecha))
+    texto_str = str(texto_fecha).strip()
+    numeros = re.findall(r'\d+', texto_str)
+    
     if len(numeros) >= 3:
-        # Si empieza por Año (Ej: 2026, 08, 18)
+        # Formato AAAA-MM-DD (Ej: ['2026', '08', '18'])
         if len(numeros[0]) == 4:
             return f"{numeros[0]}-{numeros[1].zfill(2)}-{numeros[2].zfill(2)}"
-        # Si termina en Año (Ej: 18, 08, 2026)
+        # Formato DD-MM-AAAA (Ej: ['18', '08', '2026'])
         elif len(numeros[2]) == 4:
             return f"{numeros[2]}-{numeros[1].zfill(2)}-{numeros[0].zfill(2)}"
             
-    return str(texto_fecha)
+    return texto_str
 
 # FUNCIÓN INDEPENDIENTE PARA PROCESAR CON LA IA
 def analizar_un_archivo_con_ia(archivo):
@@ -76,23 +78,23 @@ def analizar_un_archivo_con_ia(archivo):
             
             return construir_diccionario_factura(fecha, serie, numero, ruc, proveedor, total, categoria_gasto, archivo.name)
 
-        # Configuración del modelo forzado a JSON estructurado nativo
-        model = genai.GenerativeModel(
-            'gemini-1.5-flash',
-            generation_config={"response_mime_type": "application/json"}
-        )
+        # Configuración universal compatible con la API estándar de Google
+        model = genai.GenerativeModel('gemini-1.5-flash')
         
         prompt = """
         Analiza este documento contable de Perú de forma exhaustiva y extrae la información requerida.
-        Debes devolver un objeto JSON válido que contenga exactamente estas llaves textualmente:
+        Debes responder EXCLUSIVAMENTE un bloque de texto formateado en JSON estructurado. No incluyas marcas markdown de código como ```json ni texto adicional fuera de las llaves.
         
-        - 'ruc_emisor': El número de RUC de 11 dígitos de la empresa que emite la factura (el vendedor).
-        - 'razon_social': Nombre o denominación social de la empresa emisora.
-        - 'fecha_emision': Fecha del documento en formato AAAA-MM-DD.
-        - 'serie': Serie alfanumérica de 4 dígitos (Ej: F001 o E001).
-        - 'numero': Número correlativo de la factura.
-        - 'total': Monto total final cobrado (como número decimal flotante sin texto ni S/).
-        - 'categoria_gasto': Categoría de gasto contable basada en el negocio del emisor (Ej: 'Servicios Básicos', 'Gastos de Alimentos', 'Útiles de Oficina').
+        Campos exactos a extraer:
+        {
+          "ruc_emisor": "Número de RUC de 11 dígitos del vendedor emisor",
+          "razon_social": "Nombre o denominación social de la empresa emisora",
+          "fecha_emision": "Fecha en formato AAAA-MM-DD",
+          "serie": "Serie de 4 caracteres (ej. F001)",
+          "numero": "Número correlativo",
+          "total": 0.00,
+          "categoria_gasto": "Categoría corta como 'Servicios Básicos', 'Alimentos', 'Sistemas'"
+        }
         """
         
         if ext in ["jpg", "jpeg", "png"]:
@@ -107,6 +109,10 @@ def analizar_un_archivo_con_ia(archivo):
         response = model.generate_content([prompt, documento_data])
         texto_respuesta = response.text.strip()
         
+        # Extractor seguro de llaves JSON para evitar cualquier texto sobrante de la IA
+        if "{" in texto_respuesta:
+            texto_respuesta = texto_respuesta[texto_respuesta.find("{"):texto_respuesta.rfind("}")+1]
+        
         data_ia = json.loads(texto_respuesta)
         fecha_normalizada = normalizar_fecha(data_ia.get("fecha_emision"))
         
@@ -116,8 +122,7 @@ def analizar_un_archivo_con_ia(archivo):
             data_ia.get("categoria_gasto"), archivo.name
         )
     except Exception as e:
-        st.error(f"⚠️ Error procesando {archivo.name}: {str(e)}")
-        return construir_diccionario_factura("No encontrado", "Error", "Error", "No encontrado", f"Fallo: {str(e)}", 0.0, "Por clasificar", archivo.name)
+        return construir_diccionario_factura("No encontrado", "Error", "Error", "No encontrado", f"Fallo en lectura de estructura: {str(e)}", 0.0, "Por clasificar", archivo.name)
 
 def construir_diccionario_factura(fecha, serie, numero, ruc, proveedor, total, categoria_gasto, nombre_archivo):
     base_imponible = round(total / 1.18, 2)
@@ -173,6 +178,7 @@ if archivos_subidos:
         lineas_txt = [f"{r['Periodo']}|{r['RUC Emisor']}-{r['Serie']}-{r['Número']}|{r['Fecha Emisión']}||01|{r['Serie']}|{r['Número']}||6|{r['RUC Emisor']}|{r['Razón Social']}|{r['Base Imponible S/']:.2f}|{r['IGV S/']:.2f}||||||{r['Total S/']:.2f}|||1|||" for i, r in df.iterrows()]
         contenido_txt = "\r\n".join(lineas_txt) + "\r\n"
         
+        # CORRECCIÓN DE INDIZACIÓN CRÍTICA EN PANDAS (.iloc[0])
         periodo_detectado = df["Periodo"].iloc[0] if not df.empty else "202608"
         ruc_cliente_ejemplo = "20123456789"
         nombre_txt_oficial = f"LE{ruc_cliente_ejemplo}{periodo_detectado}0000080400001111.txt"
@@ -185,3 +191,4 @@ if archivos_subidos:
             with pd.ExcelWriter(out, engine='openpyxl') as w: 
                 df.drop(columns=["Archivo Original"]).to_excel(w, index=False)
             st.download_button("📥 Descargar Reporte en Excel (.xlsx)", data=out.getvalue(), file_name=f"reporte_control_sire_{periodo_detectado}.xlsx")
+
