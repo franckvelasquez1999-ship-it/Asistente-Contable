@@ -1,287 +1,207 @@
 import streamlit as st
-import pandas as pd
-import xml.etree.ElementTree as ET
-import io
-import json
-import re
-import requests
-import base64
 import random
-from PIL import Image
-from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
 
-# 1. Configuración de la página
-st.set_page_config(page_title="Asistente Contable", layout="wide")
+# 1. Configuración de la página del juego
+st.set_page_config(page_title="Yape Ninja!", layout="centered")
 
-# 2. INYECCIÓN DE DISEÑO INTERFAZ CLONADA DE YAPE
+# 2. Estilos CSS para ambientar la aplicación con la marca
 st.markdown("""
     <style>
-    .stApp { 
-        background-color: #69167c !important; 
-        font-family: 'Inter', -apple-system, sans-serif; 
-    }
-    h1, h2, h3, h4, .stMarkdown p, p, span, label { 
-        color: #ffffff !important; 
-    }
-    .stFileUploader { 
-        background-color: #7b258e !important; 
-        border: 2px dashed #00e6b3 !important; 
-        border-radius: 20px !important; 
-        padding: 25px !important; 
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2) !important; 
-    }
-    .yape-voucher-completo {
-        max-width: 440px;
-        background-color: #69167c;
-        margin: 20px auto;
+    .stApp { background-color: #51135d !important; font-family: 'Inter', sans-serif; }
+    h1, p { text-align: center; color: #ffffff !important; }
+    .instrucciones {
+        background-color: #742284;
+        padding: 15px;
+        border-radius: 12px;
+        border: 2px solid #00e6b3;
+        margin-bottom: 20px;
         text-align: center;
-        padding-bottom: 20px;
-    }
-    .yape-banner-valdelomar {
-        width: 100%;
-        height: 220px;
-        background-color: #69167c;
-        background-image: 
-            radial-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 0),
-            radial-gradient(rgba(255, 255, 255, 0.1) 2px, transparent 0);
-        background-size: 8px 8px, 16px 16px;
-        background-position: 0 0, 4px 4px;
-        position: relative;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    .yape-logo-top {
-        position: absolute;
-        left: 25px;
-        top: 60px;
-        width: 65px;
-        height: 65px;
-    }
-    .yape-logo-circle {
-        width: 26px;
-        height: 26px;
-        background-color: #00e6b3;
-        border-radius: 50%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        font-size: 0.6rem;
-        color: #69167c;
-        font-weight: 800;
-        margin-bottom: 4px;
-    }
-    .yape-logo-text {
-        font-size: 1.6rem;
-        color: #ffffff;
-        font-weight: 800;
-        font-style: italic;
-        line-height: 1;
-        letter-spacing: -1px;
-    }
-    .avatar-valdelomar {
-        width: 130px;
-        height: 130px;
-        border-radius: 50%;
-        border: 1px solid rgba(255,255,255,0.25);
-        background: radial-gradient(circle, rgba(138,43,226,0.3) 0%, rgba(74,18,84,0.8) 100%);
-        box-shadow: 0 0 30px rgba(0,0,0,0.4);
-    }
-    .txt-valdelomar {
-        position: absolute;
-        right: 25px;
-        color: rgba(255,255,255,0.4) !important;
-        font-family: 'Times New Roman', serif;
-        font-size: 0.85rem;
-        text-align: left;
-        line-height: 1.1;
-        letter-spacing: 1px;
-        font-weight: 400;
-    }
-    .yape-card-blanca {
-        background-color: #ffffff !important;
-        border-radius: 32px;
-        padding: 35px 30px;
-        margin: 0 15px;
-        text-align: left;
-        box-shadow: 0 15px 35px rgba(0,0,0,0.3);
-    }
-    .yape-header-title {
-        color: #69167c !important;
-        font-size: 1.6rem !important;
-        font-weight: 700;
-        margin-bottom: 12px;
-    }
-    .yape-monto-grande {
-        color: #383344 !important;
-        font-size: 3.8rem !important;
-        font-weight: 700;
-        margin-bottom: 15px;
-        display: flex;
-        align-items: baseline;
-        line-height: 1;
-    }
-    .yape-monto-grande span {
-        font-size: 2.2rem !important;
-        font-weight: 600;
-        margin-right: 6px;
-        color: #383344 !important;
-    }
-    .yape-destinatario {
-        color: #2c2536 !important;
-        font-size: 1.55rem !important;
-        font-weight: 700;
-        margin-bottom: 8px;
-    }
-    .yape-timestamp {
-        color: #827e8c !important;
-        font-size: 1rem !important;
-        margin-bottom: 25px;
-        padding-bottom: 20px;
-        border-bottom: 1.5px solid #f0edf5;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
-    .yape-token-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 25px;
-        padding-bottom: 20px;
-        border-bottom: 1.5px solid #f0edf5;
-    }
-    .yape-token-title {
-        color: #827e8c !important;
-        font-size: 0.85rem !important;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-    .yape-token-blocks {
-        display: flex;
-        gap: 4px;
-    }
-    .yape-block-num {
-        background-color: #f4f1f7;
-        color: #2c2536 !important;
-        font-weight: 700;
-        font-size: 1.15rem;
-        width: 30px;
-        height: 34px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        border-radius: 6px;
-        border: 1px solid #e1dae8;
-    }
-    .yape-info-section-title {
-        color: #827e8c !important;
-        font-size: 0.85rem !important;
-        font-weight: 700;
-        text-transform: uppercase;
-        margin-bottom: 18px;
-        letter-spacing: 0.5px;
-    }
-    .yape-meta-row {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 16px;
-        font-size: 1.05rem;
-        line-height: 1.2;
-    }
-    .yape-meta-label {
-        color: #827e8c !important;
-        font-weight: 500;
-    }
-    .yape-meta-value {
-        color: #2c2536 !important;
-        font-weight: 600;
-        text-align: right;
-    }
-    .stButton>button {
-        background-color: #00e6b3 !important;
-        color: #69167c !important;
-        font-weight: 700 !important;
-        border-radius: 25px !important;
-        border: none !important;
-        padding: 12px 25px !important;
-        width: 100%;
-        font-size: 1.05rem !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-    .stButton>button:hover {
-        background-color: #ffffff !important;
-        color: #69167c !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("📊 Extractor de Facturas SUNAT")
-st.write("✨ **Motor de Alta Velocidad:** Procesamiento paralelo de comprobantes con visualización nativa idéntica.")
+st.title("🥷 ¡YAPE NINJA!")
+st.write("¡Protege tu cuenta de los ciberdelincuentes en tiempo real!")
 
-api_key = st.secrets.get("GEMINI_API_KEY", "")
+# Caja de instrucciones para el jugador
+st.markdown("""
+<div class="instrucciones">
+    <strong>¿Cómo jugar?</strong><br>
+    🟢 Haz clic/toque en los <strong>Globos de Yape (S/)</strong> para sumar 10 puntos.<br>
+    ❌ Evita hacer clic en los <strong>Mensajes de Estafa (SMS ⚠️)</strong> o perderás una vida.<br>
+    🏆 ¡Consigue la mayor puntuación antes de perder tus 3 vidas!
+</div>
+""", unsafe_allow_html=True)
 
-def consulting_gemini_api_direct(prompt, contenido_bytes=None, mime_type=None, api_key_str=""):
-    url = f"https://googleapis.com{api_key_str}"
-    headers = {"Content-Type": "application/json"}
-    partes = [{"text": prompt}]
-    if contenido_bytes and mime_type:
-        base64_data = base64.b64encode(contenido_bytes).decode("utf-8")
-        partes.append({"inlineData": {"mimeType": mime_type, "data": base64_data}})
-    payload = {"contents": [{"parts": partes}]}
-    response = requests.post(url, headers=headers, json=payload, timeout=30)
-    if response.status_code == 200:
-        try:
-            return response.json()["candidates"]["content"]["parts"]["text"]
-        except:
-            return "{}"
-    return "{}"
+# 3. EL MOTOR DE JUEGO (HTML5 CANVAS + JAVASCRIPT) INYECTADO DIRECTAMENTE
+html_juego = """
+<div style="text-align: center;">
+    <canvas id="gameCanvas" width="500" height="500" style="border: 4px solid #00e6b3; border-radius: 16px; background-color: #1e1b29; cursor: crosshair; max-width: 100%;"></canvas>
+</div>
 
-def analizar_un_archivo_con_ia(archivo):
-    # Inicialización de variables seguras por defecto
-    ruc = "No encontrado"
-    proveedor = "No encontrado"
-    fecha = "No encontrado"
-    serie = "F001"
-    numero = "00000001"
-    total_val = 0.0
-    categoria_gasto = "Por clasificar"
-    
-    try:
-        ext = archivo.name.split(".")[-1].lower()
-        bytes_archivo = archivo.read()
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+// Variables globales del estado del juego
+let score = 0;
+let lives = 3;
+let gameOver = false;
+let gameObjects = [];
+let spawnTimer = 0;
+let spawnInterval = 50; // Velocidad de aparición inicial
+
+// Clase constructora para los objetos que caen (Globos y Estafas)
+class FallingObject {
+    constructor() {
+        this.x = Math.random() * (canvas.width - 60) + 30;
+        this.y = -40;
+        this.radius = 24;
+        this.speed = Math.random() * 2 + 2 + (score / 100); // Sube la velocidad conforme sumas puntos
+        this.type = Math.random() > 0.4 ? 'yape' : 'estafa'; // 60% Globos, 40% Estafas
+        this.sliced = false;
+    }
+
+    update() {
+        this.y += this.speed;
+    }
+
+    draw() {
+        ctx.save();
+        if (this.type === 'yape') {
+            // Dibujar Globo Yape (Verde Menta brillante)
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fillStyle = "#00e6b3";
+            ctx.fill();
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Texto dentro del globo
+            ctx.fillStyle = "#742284";
+            ctx.font = "bold 16px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("S/", this.x, this.y + 6);
+        } else {
+            // Dibujar Mensaje de Estafa (Rectángulo Rojo de SMS)
+            ctx.fillStyle = "#ff4a4a";
+            ctx.fillRect(this.x - 25, this.y - 18, 50, 36);
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(this.x - 25, this.y - 18, 50, 36);
+            
+            // Icono de alerta
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "bold 14px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("SMS ⚠️", this.x, this.y + 5);
+        }
+        ctx.restore();
+    }
+}
+
+# Capturar los clics del mouse sobre el área del lienzo
+canvas.addEventListener("mousedown", function(e) {
+    if (gameOver) {
+        // Reiniciar el juego si haces clic en la pantalla de Game Over
+        score = 0;
+        lives = 3;
+        gameOver = false;
+        gameObjects = [];
+        spawnInterval = 50;
+        return;
+    }
+
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    // Detectar si el clic impactó algún objeto en movimiento
+    for (let i = gameObjects.length - 1; i >= 0; i--) {
+        let obj = gameObjects[i];
+        let dist = Math.sqrt((mouseX - obj.x)**2 + (mouseY - obj.y)**2);
         
-        if ext == "xml":
-            archivo.seek(0)
-            tree = ET.parse(archivo)
-            root = tree.getroot()
-            serie_num = root.find(".//{*}ID")
-            fecha_emision = root.find(".//{*}IssueDate")
-            ruc_emisor = root.find(".//{*}AccountingSupplierParty//{*}CustomerAssignedAccountID")
-            nombre_emisor = root.find(".//{*}AccountingSupplierParty//{*}RegistrationName")
-            monto_total_xml = root.find(".//{*}LegalMonetaryTotal//{*}PayableAmount")
-            
-            ruc = ruc_emisor.text if ruc_emisor is not None else "No encontrado"
-            proveedor = nombre_emisor.text if nombre_emisor is not None else "No encontrado"
-            fecha = fecha_emision.text if fecha_emision is not None else "No encontrado"
-            id_comprobante = serie_num.text if serie_num is not None else "F001-00000001"
-            serie, numero = id_comprobante.split("-", 1) if "-" in id_comprobante else (id_comprobante[:4], id_comprobante[4:])
-            total_val = float(monto_total_xml.text) if monto_total_xml is not None else 0.0
-            
-            res_txt = consulting_gemini_api_direct("Clasifica este proveedor en una categoría de gasto corta de 2 a 4 palabras. Responde SOLO la categoría.", api_key_str=api_key)
-            categoria_gasto = res_txt.strip()
-            
-        else:
-            prompt_lineal = "Analiza este documento contable de Peru de forma exhaustiva y extrae la informacion requerida. Debes responder EXCLUSIVAMENTE un bloque de texto formateado en JSON estructurado. No incluyas marcas markdown de codigo como ```json ni texto adicional fuera de las llaves. Campos exactos a extraer: {\"ruc_emisor\": \"Numero de RUC de 11 digitos del vendedor emisor\", \"razon_social\": \"Nombre o denominacion social de la empresa emisora\", \"fecha_emision\": \"Fecha en formato AAAA-MM-DD\", \"serie\": \"Serie de 4 caracteres (ej. F001)\", \"numero\": \"Numero correlativo\", \"total\": 0.00, \"categoria_gasto\": \"Categoria corta de gasto\"}"
-            mime_type = "application/pdf"
-            if ext in ["jpg", "jpeg", "png"]:
-                mime_type = "image/jpeg"
-                
-            texto_respuesta = consulting_gemini_api_direct(prompt_lineal, bytes_archivo, mime_type, api_key).strip()
-            if "{" in texto_respuesta:
-                texto_respuesta = texto_respuesta[texto_respuesta.find("{"):texto_respuesta.rfind("}")+1]
-            
-            data_ia = json.loads(texto_respuesta)
+        if (dist < obj.radius + 10) {
+            if (obj.type === 'yape') {
+                score += 10; // Sumar puntos por recolectar el dinero
+            } else {
+                lives -= 1; // Restar vida por caer en la estafa
+                if (lives <= 0) gameOver = true;
+            }
+            gameObjects.splice(i, 1);
+            break;
+        }
+    }
+});
 
+// Bucle principal del juego (Game Loop a 60 FPS)
+function gameLoop() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (!gameOver) {
+        // Generar nuevos objetos periódicamente
+        spawnTimer++;
+        if (spawnTimer > spawnInterval) {
+            gameObjects.push(new FallingObject());
+            spawnTimer = 0;
+            // Aumentar la dificultad gradualmente
+            if (spawnInterval > 20) spawnInterval -= 0.5;
+        }
+
+        // Actualizar y pintar cada objeto en pantalla
+        for (let i = gameObjects.length - 1; i >= 0; i--) {
+            let obj = gameObjects[i];
+            obj.update();
+            obj.draw();
+
+            // Si el objeto cae fuera de la pantalla sin ser tocado
+            if (obj.y > canvas.height + 40) {
+                if (obj.type === 'yape') {
+                    lives -= 1; // Dejar ir dinero real te quita una vida
+                    if (lives <= 0) gameOver = true;
+                }
+                gameObjects.splice(i, 1);
+            }
+        }
+
+        // Dibujar el Marcador de Puntuación (Estilo Interfaz Yape)
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 20px sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText("💰 Saldo Puntos: " + score, 20, 40);
+
+        // Dibujar Corazones de Vidas restantes
+        ctx.textAlign = "right";
+        ctx.fillStyle = "#ff4a4a";
+        ctx.fillText("❤️ Vidas: " + "⭐".repeat(lives), canvas.width - 20, 40);
+
+    } else {
+        // Pantalla de Fin de Juego (Game Over)
+        ctx.fillStyle = "rgba(116, 34, 132, 0.85)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = "#00e6b3";
+        ctx.font = "bold 40px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("¡CUENTA HACKEADA!", canvas.width / 2, canvas.height / 2 - 40);
+
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "24px sans-serif";
+        ctx.fillText("Puntuación Final: " + score + " pts", canvas.width / 2, canvas.height / 2 + 10);
+        
+        ctx.font = "bold 16px sans-serif";
+        ctx.fillStyle = "#00e6b3";
+        ctx.fillText("Haz clic en cualquier parte para REINICIAR", canvas.width / 2, canvas.height / 2 + 60);
+    }
+
+    requestAnimationFrame(gameLoop);
+}
+
+// Iniciar el juego
+gameLoop();
+</script>
+"""
+
+# Renderizar el juego completo de forma segura en Streamlit
+st.components.v1.html(html_juego, height=530, scrolling=False)
