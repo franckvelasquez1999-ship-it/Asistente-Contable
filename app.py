@@ -31,7 +31,7 @@ api_key = st.secrets.get("GEMINI_API_KEY", "")
 if api_key:
     genai.configure(api_key=api_key)
 
-# FUNCIÓN PARA NORMALIZAR FECHAS DE MANERA SEGURA (CORREGIDA CON ÍNDICES)
+# FUNCIÓN PARA NORMALIZAR FECHAS DE MANERA SEGURA
 def normalizar_fecha(texto_fecha):
     if not texto_fecha or texto_fecha == "No encontrado":
         return "No encontrado"
@@ -40,11 +40,9 @@ def normalizar_fecha(texto_fecha):
     numeros = re.findall(r'\d+', texto_str)
     
     if len(numeros) >= 3:
-        # Formato AAAA-MM-DD (Ej: ['2026', '08', '18'])
-        if len(numeros[0]) == 4:
+        if len(numeros[0]) == 4:  # Formato AAAA-MM-DD
             return f"{numeros[0]}-{numeros[1].zfill(2)}-{numeros[2].zfill(2)}"
-        # Formato DD-MM-AAAA (Ej: ['18', '08', '2026'])
-        elif len(numeros[2]) == 4:
+        elif len(numeros[2]) == 4:  # Formato DD-MM-AAAA
             return f"{numeros[2]}-{numeros[1].zfill(2)}-{numeros[0].zfill(2)}"
             
     return texto_str
@@ -72,14 +70,15 @@ def analizar_un_archivo_con_ia(archivo):
             serie, numero = id_comprobante.split("-", 1) if "-" in id_comprobante else (id_comprobante[:4], id_comprobante[4:])
             total = float(monto_total_xml.text) if monto_total_xml is not None else 0.0
             
-            model_text = genai.GenerativeModel('gemini-1.5-flash')
+            # Cambiado a identificador universal robusto compatible
+            model_text = genai.GenerativeModel('gemini-1.5-flash-latest')
             res_txt = model_text.generate_content(f"Clasifica '{proveedor}' en una categoría de gasto contable de 2 a 4 palabras. Responde SOLO la categoría.")
             categoria_gasto = res_txt.text.strip()
             
             return construir_diccionario_factura(fecha, serie, numero, ruc, proveedor, total, categoria_gasto, archivo.name)
 
-        # Configuración universal compatible con la API estándar de Google
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # Cambiado a identificador universal robusto compatible para evitar error 404
+        model = genai.GenerativeModel('gemini-1.5-flash-latest')
         
         prompt = """
         Analiza este documento contable de Perú de forma exhaustiva y extrae la información requerida.
@@ -109,7 +108,6 @@ def analizar_un_archivo_con_ia(archivo):
         response = model.generate_content([prompt, documento_data])
         texto_respuesta = response.text.strip()
         
-        # Extractor seguro de llaves JSON para evitar cualquier texto sobrante de la IA
         if "{" in texto_respuesta:
             texto_respuesta = texto_respuesta[texto_respuesta.find("{"):texto_respuesta.rfind("}")+1]
         
@@ -178,7 +176,7 @@ if archivos_subidos:
         lineas_txt = [f"{r['Periodo']}|{r['RUC Emisor']}-{r['Serie']}-{r['Número']}|{r['Fecha Emisión']}||01|{r['Serie']}|{r['Número']}||6|{r['RUC Emisor']}|{r['Razón Social']}|{r['Base Imponible S/']:.2f}|{r['IGV S/']:.2f}||||||{r['Total S/']:.2f}|||1|||" for i, r in df.iterrows()]
         contenido_txt = "\r\n".join(lineas_txt) + "\r\n"
         
-        # CORRECCIÓN DE INDIZACIÓN CRÍTICA EN PANDAS (.iloc[0])
+        # CORRECCIÓN DE SINTAXIS EN PANDAS (.iloc[0] Añadido correctamente)
         periodo_detectado = df["Periodo"].iloc[0] if not df.empty else "202608"
         ruc_cliente_ejemplo = "20123456789"
         nombre_txt_oficial = f"LE{ruc_cliente_ejemplo}{periodo_detectado}0000080400001111.txt"
@@ -191,4 +189,5 @@ if archivos_subidos:
             with pd.ExcelWriter(out, engine='openpyxl') as w: 
                 df.drop(columns=["Archivo Original"]).to_excel(w, index=False)
             st.download_button("📥 Descargar Reporte en Excel (.xlsx)", data=out.getvalue(), file_name=f"reporte_control_sire_{periodo_detectado}.xlsx")
+
 
