@@ -60,16 +60,6 @@ st.markdown("""
         font-size: 2.2rem !important;
         font-weight: 700 !important;
     }
-    
-    /* Cambiar el texto interior del botón de subir para que combine */
-    .stFileUploader button {
-        background-color: #2563eb !important;
-        color: white !important;
-        border: none !important;
-    }
-    .stFileUploader button:hover {
-        background-color: #1d4ed8 !important;
-    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -148,7 +138,7 @@ if archivos_subidos:
                 total = float(monto_total_xml.text) if monto_total_xml is not None else 0.0
                 
                 client_text = Groq(api_key=api_key)
-                prompt_txt = f"Clasifica '{proveedor}' en una categoría de gasto corta de 2 a 4 palabras. Resconde SOLO la categoría."
+                prompt_txt = f"Clasifica '{proveedor}' en una categoría de gasto corta de 2 a 4 palabras. Responde SOLO la categoría."
                 chat_text = client_text.chat.completions.create(
                     messages=[{"role": "user", "content": prompt_txt}], model="llama3-8b-8192", temperature=0.1
                 )
@@ -170,7 +160,7 @@ if archivos_subidos:
                     total = float(data_ia.get("total", 0.0))
                     categoria_gasto = data_ia.get("categoria_gasto", "Por clasificar")
                 else:
-                    raise Exception("La IA no pudo estructurar el PDF.")
+                    raise Exception("La IA no pudo extraer los datos.")
 
             elif ext in ["jpg", "jpeg", "png"]:
                 ruc, proveedor, fecha, serie, numero, total = "20601122334", "FOTO_COMPROBANTE_PROCESADA", "2026-08-18", "E001", "5432", 150.00
@@ -211,7 +201,7 @@ if archivos_subidos:
         st.success(f"¡Se consolidaron con éxito {len(datos_facturas)} documentos!")
         st.dataframe(df, use_container_width=True)
         
-        # Tarjetas financieras estilizadas con temática Gris y Azul
+        # Tarjetas financieras
         col1, col2, col3 = st.columns(3)
         col1.metric("Total Base Imponible", f"S/ {df['Base Imponible S/'].sum():,.2f}")
         col2.metric("Total Crédito Fiscal (IGV)", f"S/ {df['IGV S/'].sum():,.2f}")
@@ -224,3 +214,9 @@ if archivos_subidos:
         
         b1, b2 = st.columns(2)
         with b1:
+            st.download_button("📥 Descargar Archivo Plano SIRE (.txt)", data=contenido_txt, file_name=nombre_txt_oficial, mime="text/plain")
+        with b2:
+            out = io.BytesIO()
+            with pd.ExcelWriter(out, engine='openpyxl') as w: 
+                df.to_excel(w, index=False)
+            st.download_button("📥 Descargar Reporte en Excel (.xlsx)", data=out.getvalue(), file_name="reporte_control_sire.xlsx")
