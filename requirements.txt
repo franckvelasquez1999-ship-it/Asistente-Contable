@@ -1,6 +1,6 @@
 streamlit
 pandas
-groq
+google-generativeai
 openpyxl
-Pillow
 pypdf
+
