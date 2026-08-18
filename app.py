@@ -290,7 +290,4 @@ with btn_col1:
         </div>
         """
         
-        # Almacenar de forma segura el resultado procesado en la memoria de sesión
-        st.session_state.html_actual = plantilla_html.replace("__MONTO__", monto_formateado)\
-                                                        .replace("__NOMBRE__", nombre_destinatario)\
-                                                        .replace("__FECHA__", timestamp_yape)\
+        # Unificado de forma lineal estricta sin barras invertidas para evitar SyntaxError
