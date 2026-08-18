@@ -235,12 +235,20 @@ def consulting_gemini_api_direct(prompt, contenido_bytes=None, mime_type=None, a
     if response.status_code == 200:
         try:
             return response.json()["candidates"]["content"]["parts"]["text"]
-        except (KeyError, IndexError):
-            raise Exception("Respuesta con estructura inesperada.")
-    else:
-        raise Exception(f"Error HTTP {response.status_code}")
+        except:
+            return "{}"
+    return "{}"
 
 def analizar_un_archivo_con_ia(archivo):
+    # Inicialización de variables seguras por defecto
+    ruc = "No encontrado"
+    proveedor = "No encontrado"
+    fecha = "No encontrado"
+    serie = "F001"
+    numero = "00000001"
+    total_val = 0.0
+    categoria_gasto = "Por clasificar"
+    
     try:
         ext = archivo.name.split(".")[-1].lower()
         bytes_archivo = archivo.read()
@@ -264,19 +272,16 @@ def analizar_un_archivo_con_ia(archivo):
             
             res_txt = consulting_gemini_api_direct("Clasifica este proveedor en una categoría de gasto corta de 2 a 4 palabras. Responde SOLO la categoría.", api_key_str=api_key)
             categoria_gasto = res_txt.strip()
-        
-        if ext != "xml":
+            
+        else:
             prompt_lineal = "Analiza este documento contable de Peru de forma exhaustiva y extrae la informacion requerida. Debes responder EXCLUSIVAMENTE un bloque de texto formateado en JSON estructurado. No incluyas marcas markdown de codigo como ```json ni texto adicional fuera de las llaves. Campos exactos a extraer: {\"ruc_emisor\": \"Numero de RUC de 11 digitos del vendedor emisor\", \"razon_social\": \"Nombre o denominacion social de la empresa emisora\", \"fecha_emision\": \"Fecha en formato AAAA-MM-DD\", \"serie\": \"Serie de 4 caracteres (ej. F001)\", \"numero\": \"Numero correlativo\", \"total\": 0.00, \"categoria_gasto\": \"Categoria corta de gasto\"}"
             mime_type = "application/pdf"
             if ext in ["jpg", "jpeg", "png"]:
                 mime_type = "image/jpeg"
                 
-            texto_respuesta = consulting_gemini_api_direct(prompt_lineal, bytes_archivo, mime_type, api_key)
-            texto_respuesta = texto_respuesta.strip()
-            
+            texto_respuesta = consulting_gemini_api_direct(prompt_lineal, bytes_archivo, mime_type, api_key).strip()
             if "{" in texto_respuesta:
                 texto_respuesta = texto_respuesta[texto_respuesta.find("{"):texto_respuesta.rfind("}")+1]
             
             data_ia = json.loads(texto_respuesta)
-            ruc = data_ia.get("ruc_emisor", "No encontrado")
 
