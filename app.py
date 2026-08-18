@@ -9,12 +9,14 @@ st.set_page_config(page_title="Simulador de Constancias Yape", layout="centered"
 if "html_actual" not in st.session_state:
     st.session_state.html_actual = None
 
-# 2. INYECCIÓN DE DISEÑO INTERFAZ DE YAPE PREMIUM
+# 2. INYECCIÓN DE DISEÑO INTERFAZ DE YAPE PREMIUM CLONADA AL 100%
 st.markdown("""
     <style>
+    @import url('https://googleapis.com');
+
     .stApp { 
         background-color: #69167c !important; 
-        font-family: 'Inter', -apple-system, sans-serif; 
+        font-family: 'Inter', sans-serif; 
     }
     h1, h2, h3, p, span, label { 
         color: #ffffff !important; 
@@ -25,175 +27,179 @@ st.markdown("""
         border: 1px solid #00e6b3 !important;
         border-radius: 10px !important;
     }
-    .yape-voucher-completo {
+    
+    /* VOUCHER COMPLETO CLONADO */
+    .yape-voucher-real {
         max-width: 440px;
         background-color: #69167c;
         margin: 20px auto;
-        text-align: center;
         padding-bottom: 20px;
+        box-sizing: border-box;
     }
-    .yape-banner-valdelomar {
+
+    /* CABECERA CON EL FORMATO EXACTO DE ARRIBA */
+    .yape-cabecera-art {
         width: 100%;
-        height: 220px;
+        height: 200px;
         background-color: #69167c;
         background-image: 
-            radial-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 0),
-            radial-gradient(rgba(255, 255, 255, 0.1) 2px, transparent 0);
-        background-size: 8px 8px, 16px 16px;
-        background-position: 0 0, 4px 4px;
+            radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 0),
+            radial-gradient(rgba(255, 255, 255, 0.08) 2px, transparent 0);
+        background-size: 10px 10px, 20px 20px;
+        background-position: 0 0, 5px 5px;
         position: relative;
         display: flex;
         align-items: center;
         justify-content: center;
     }
-    .yape-logo-top {
+    .yape-brand-group {
         position: absolute;
-        left: 25px;
-        top: 60px;
-        width: 65px;
-        height: 65px;
+        left: 24px;
+        top: 65px;
+        text-align: left;
     }
-    .yape-logo-circle {
-        width: 26px;
-        height: 26px;
+    .yape-logo-bubble {
+        width: 24px;
+        height: 24px;
         background-color: #00e6b3;
         border-radius: 50%;
         display: flex;
         justify-content: center;
         align-items: center;
-        font-size: 0.6rem;
+        font-size: 0.65rem;
         color: #69167c;
         font-weight: 800;
-        margin-bottom: 4px;
+        margin-bottom: 2px;
     }
-    .yape-logo-text {
-        font-size: 1.6rem;
+    .yape-logo-txt-style {
+        font-size: 1.7rem;
         color: #ffffff;
         font-weight: 800;
         font-style: italic;
         line-height: 1;
         letter-spacing: -1px;
     }
-    .avatar-valdelomar {
-        width: 130px;
-        height: 130px;
+    .yape-avatar-circle {
+        width: 125px;
+        height: 125px;
         border-radius: 50%;
-        border: 1px solid rgba(255,255,255,0.25);
-        background: radial-gradient(circle, rgba(138,43,226,0.3) 0%, rgba(74,18,84,0.8) 100%);
-        box-shadow: 0 0 30px rgba(0,0,0,0.4);
+        border: 1px solid rgba(255,255,255,0.2);
+        background: radial-gradient(circle, rgba(138,43,226,0.2) 0%, rgba(74,18,84,0.7) 100%);
     }
-    .txt-valdelomar {
+    .yape-txt-valdelomar {
         position: absolute;
-        right: 25px;
-        color: rgba(255,255,255,0.4) !important;
+        right: 24px;
+        color: rgba(255,255,255,0.35) !important;
         font-family: 'Times New Roman', serif;
         font-size: 0.85rem;
         text-align: left;
         line-height: 1.1;
-        letter-spacing: 1px;
-        font-weight: 400;
+        letter-spacing: 0.5px;
     }
-    .yape-card-blanca {
+
+    /* CONTENEDOR TARJETA BLANCA */
+    .yape-cuerpo-blanco {
         background-color: #ffffff !important;
-        border-radius: 32px;
-        padding: 35px 30px;
-        margin: 0 15px;
+        border-radius: 28px;
+        padding: 35px 28px;
+        margin: 0 16px;
         text-align: left;
-        box-shadow: 0 15px 35px rgba(0,0,0,0.3);
     }
-    .yape-header-title {
+    .y_titulo {
         color: #69167c !important;
-        font-size: 1.6rem !important;
+        font-size: 1.55rem !important;
         font-weight: 700;
-        margin-bottom: 12px;
+        margin-bottom: 10px;
     }
-    .yape-monto-grande {
-        color: #383344 !important;
-        font-size: 3.8rem !important;
+    .y_monto {
+        color: #2c2536 !important;
+        font-size: 3.6rem !important;
         font-weight: 700;
-        margin-bottom: 15px;
+        margin-bottom: 10px;
         display: flex;
         align-items: baseline;
         line-height: 1;
     }
-    .yape-monto-grande span {
-        font-size: 2.2rem !important;
+    .y_monto span {
+        font-size: 2.1rem !important;
         font-weight: 600;
         margin-right: 6px;
-        color: #383344 !important;
+        color: #2c2536 !important;
     }
-    .yape-destinatario {
+    .y_usuario {
         color: #2c2536 !important;
         font-size: 1.55rem !important;
         font-weight: 700;
-        margin-bottom: 8px;
+        margin-bottom: 6px;
     }
-    .yape-timestamp {
+    .y_fecha {
         color: #827e8c !important;
-        font-size: 1rem !important;
-        margin-bottom: 25px;
-        padding-bottom: 20px;
+        font-size: 0.95rem !important;
+        margin-bottom: 22px;
+        padding-bottom: 18px;
         border-bottom: 1.5px solid #f0edf5;
-        display: flex;
-        align-items: center;
-        gap: 6px;
     }
-    .yape-token-row {
+
+    /* CÓDIGO DE SEGURIDAD */
+    .y_token_row {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 25px;
-        padding-bottom: 20px;
+        margin-bottom: 22px;
+        padding-bottom: 18px;
         border-bottom: 1.5px solid #f0edf5;
     }
-    .yape-token-title {
+    .y_token_label {
         color: #827e8c !important;
-        font-size: 0.85rem !important;
+        font-size: 0.8rem !important;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
-    .yape-token-blocks {
+    .y_token_blocks {
         display: flex;
         gap: 4px;
     }
-    .yape-block-num {
+    .y_token_digit {
         background-color: #f4f1f7;
         color: #2c2536 !important;
         font-weight: 700;
         font-size: 1.15rem;
-        width: 30px;
-        height: 34px;
+        width: 28px;
+        height: 32px;
         display: flex;
         justify-content: center;
         align-items: center;
         border-radius: 6px;
         border: 1px solid #e1dae8;
     }
-    .yape-info-section-title {
+
+    /* FILAS METADATOS DE TRANSACCIÓN */
+    .y_meta_title {
         color: #827e8c !important;
-        font-size: 0.85rem !important;
+        font-size: 0.8rem !important;
         font-weight: 700;
         text-transform: uppercase;
-        margin-bottom: 18px;
+        margin-bottom: 16px;
         letter-spacing: 0.5px;
     }
-    .yape-meta-row {
+    .y_meta_line {
         display: flex;
         justify-content: space-between;
-        margin-bottom: 16px;
-        font-size: 1.05rem;
-        line-height: 1.2;
+        margin-bottom: 14px;
+        font-size: 1rem;
     }
-    .yape-meta-label {
+    .y_meta_lbl {
         color: #827e8c !important;
         font-weight: 500;
     }
-    .yape-meta-value {
+    .y_meta_val {
         color: #2c2536 !important;
         font-weight: 600;
         text-align: right;
     }
+
+    /* BOTONES INTERFAZ STREAMLIT */
     .stButton>button {
         background-color: #00e6b3 !important;
         color: #69167c !important;
@@ -203,19 +209,17 @@ st.markdown("""
         padding: 12px 25px !important;
         width: 100%;
         font-size: 1.1rem !important;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     }
     .stButton>button:hover {
         background-color: #ffffff !important;
-        color: #69167c !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
 st.title("🔮 Simulador de Comprobantes Yape")
-st.write("Genera constancias digitales con códigos y tokens dinámicos en tiempo real.")
+st.write("Genera constancias digitales exactas con códigos y tokens dinámicos en tiempo real.")
 
-# 3. FORMULARIO DE RECOPILACIÓN DE DATOS
+# 3. FORMULARIO DE ENTRADA DE DATOS
 st.markdown("### 📝 Datos del Comprobante")
 col1, col2 = st.columns(2)
 
@@ -227,67 +231,78 @@ with col2:
     numero_celular = st.text_input("Número de Celular", "*** *** 614")
     banco_destino = st.selectbox("Banco Destino", ["Yape", "BCP", "Interbank", "BBVA", "Scotiabank"])
 
-# 4. BOTONES DE ACCIÓN EN PARALELO
+# 4. BOTONES DE CONTROL DE INTERFAZ
 btn_col1, btn_col2 = st.columns(2)
 
 with btn_col1:
     if st.button("🚀 Generar Nuevo Comprobante Único"):
-        cod_seguridad_1 = str(random.randint(0, 9))
-        cod_seguridad_2 = str(random.randint(0, 9))
-        cod_seguridad_3 = str(random.randint(0, 9))
-        numero_operacion_dinamico = str(random.randint(10000000, 99999999))
+        # Cálculo seguro de valores dinámicos
+        t1, t2, t3 = str(random.randint(0, 9)), str(random.randint(0, 9)), str(random.randint(0, 9))
+        nro_op = str(random.randint(10000000, 99999999))
         
-        meses_es = {
-            "Jan": "ene.", "Feb": "feb.", "Mar": "mar.", "Apr": "abr.", 
-            "May": "may.", "Jun": "jun.", "Jul": "jul.", "Aug": "ago.", 
-            "Sep": "set.", "Oct": "oct.", "Nov": "nov.", "Dec": "dic."
-        }
-        fecha_actual = datetime.now()
-        mes_formateado = meses_es.get(fecha_actual.strftime("%b"), "ago.")
-        timestamp_yape = f"{fecha_actual.strftime('%d')} {mes_formateado} {fecha_actual.strftime('%Y')} | {fecha_actual.strftime('%I:%M %p.').lower()}"
-        monto_formateado = f"{monto_envio:,.2f}"
+        meses_es = {"Jan":"jul.", "Feb":"feb.", "Mar":"mar.", "Apr":"abr.", "May":"may.", "Jun":"jun.", "Jul":"jul.", "Aug":"ago.", "Sep":"set.", "Oct":"oct.", "Nov":"nov.", "Dec":"dic."}
+        fecha_hoy = datetime.now()
+        mes_corregido = meses_es.get(fecha_hoy.strftime("%b"), "jul.")
+        fecha_actual_str = f"{fecha_hoy.strftime('%d')} {mes_corregido} {fecha_hoy.strftime('%Y')} | {fecha_hoy.strftime('%I:%M %p.').lower()}"
+        monto_formateado = f"{monto_envio:,.2f}".replace(".00", "")
 
-        plantilla_html = """
-        <div class="yape-voucher-completo">
-            <div class="yape-banner-valdelomar">
-                <div class="yape-logo-top">
-                    <div class="yape-logo-circle">S/</div>
-                    <div class="yape-logo-text">yape</div>
+        # CONSTRUCCIÓN HTML PURO USANDO FORMATEO INDEXADO (EVITA CUALQUER ERROR SINTÁCTICO DE TRIPLES COMILLAS)
+        st.session_state.html_actual = """
+        <div class="yape-voucher-real">
+            <div class="yape-cabecera-art">
+                <div class="yape-brand-group">
+                    <div class="yape-logo-bubble">S/</div>
+                    <div class="yape-logo-text-style">yape</div>
                 </div>
-                <div class="avatar-valdelomar"></div>
-                <div class="txt-valdelomar">ABRAHAM<br>VALDELOMAR</div>
+                <div class="yape-avatar-circle"></div>
+                <div class="yape-txt-valdelomar">ABRAHAM<br>VALDELOMAR</div>
             </div>
             
-            <div class="yape-card-blanca">
-                <div class="yape-header-title">¡Yapeaste!</div>
-                <div class="yape-monto-grande"><span>S/</span>__MONTO__</div>
-                <div class="yape-destinatario">__NOMBRE__</div>
-                <div class="yape-timestamp">📅 __FECHA__</div>
+            <div class="yape-cuerpo-blanco">
+                <div class="y_titulo">¡Yapeaste!</div>
+                <div class="y_monto"><span>S/</span>{monto}</div>
+                <div class="y_usuario">{nombre}</div>
+                <div class="y_fecha">📅 {fecha}</div>
                 
-                <div class="yape-token-row">
-                    <div class="yape-token-title">Código de seguridad</div>
-                    <div class="yape-token-blocks">
-                        <div class="yape-block-num">__TOK1__</div>
-                        <div class="yape-block-num">__TOK2__</div>
-                        <div class="yape-block-num">__TOK3__</div>
+                <div class="y_token_row">
+                    <div class="y_token_label">Código de seguridad</div>
+                    <div class="y_token_blocks">
+                        <div class="y_token_digit">{tok1}</div>
+                        <div class="y_token_digit">{tok2}</div>
+                        <div class="y_token_digit">{tok3}</div>
                     </div>
                 </div>
                 
-                <div class="yape-info-section-title">Datos de la transacción</div>
-                <div class="yape-meta-row">
-                    <span class="yape-meta-label">Nro. de celular</span>
-                    <span class="yape-meta-value">__CEL__</span>
+                <div class="y_meta_title">Datos de la transacción</div>
+                <div class="y_meta_line">
+                    <span class="y_meta_lbl">Nro. de celular</span>
+                    <span class="y_meta_val">{celular}</span>
                 </div>
-                <div class="yape-meta-row">
-                    <span class="yape-meta-label">Destino</span>
-                    <span class="yape-meta-value">__BANCO__</span>
+                <div class="y_meta_line">
+                    <span class="y_meta_lbl">Destino</span>
+                    <span class="y_meta_val">{banco}</span>
                 </div>
-                <div class="yape-meta-row">
-                    <span class="yape-meta-label">Nro. de operación</span>
-                    <span class="yape-meta-value">__NRO__</span>
+                <div class="y_meta_line">
+                    <span class="y_meta_lbl">Nro. de operación</span>
+                    <span class="y_meta_val">{operacion}</span>
                 </div>
             </div>
         </div>
-        """
-        
-        # Unificado de forma lineal estricta sin barras invertidas para evitar SyntaxError
+        """.format(
+            monto=monto_formateado,
+            nombre=nombre_destinatario,
+            fecha=fecha_actual_str,
+            tok1=t1, tok2=t2, tok3=t3,
+            celular=numero_celular,
+            banco=banco_destino,
+            operacion=nro_op
+        )
+        st.rerun()
+
+with btn_col2:
+    if st.button("🗑️ Limpiar Pantalla"):
+        st.session_state.html_actual = None
+        st.rerun()
+
+# 5. RENDERIZADO DEL COMPROBANTE BLOQUEADO EN SESIÓN
+if st.session_state.html_actual:
